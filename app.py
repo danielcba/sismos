@@ -24,12 +24,13 @@ st.set_page_config(
 def get_db_connection():
     try:
         conn = psycopg2.connect(
-            dbname=os.environ.get('DB_NAME'),
-            user=os.environ.get('DB_USER'),
-            password=os.environ.get('DB_PASSWORD'),
-            host=os.environ.get('DB_HOST'),  # ¡Este debe ser el host de Supabase!
-            port=os.environ.get('DB_PORT'),
-            sslmode='require'  # Obligatorio para Supabase
+            dbname=st.secrets["db"]["DB_NAME"],
+            user=st.secrets["db"]["DB_USER"],
+            password=st.secrets["db"]["DB_PASSWORD"],
+            host=st.secrets["db"]["DB_HOST"],  # Host de Supabase
+            port=st.secrets["db"]["DB_PORT"],
+            sslmode='require',
+            sslrootcert='prod-ca-2021.crt'  # Archivo de certificado
         )
         return conn
     except Exception as e:
