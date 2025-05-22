@@ -9,6 +9,9 @@ import numpy as np
 from datetime import datetime
 import psycopg2
 import os  # Importar os para variables de entorno
+# Añade esto al principio de tu app.py
+import socket
+socket.getaddrinfo = lambda *args: [(socket.AF_INET6, socket.SOCK_STREAM, 0, "", (args[0], args[1]))]
 
 # Configuración de la página
 st.set_page_config(
