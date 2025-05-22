@@ -27,10 +27,12 @@ def get_db_connection():
             dbname=st.secrets["db"]["DB_NAME"],
             user=st.secrets["db"]["DB_USER"],
             password=st.secrets["db"]["DB_PASSWORD"],
-            host=st.secrets["db"]["DB_HOST"],  # Host de Supabase
+            host=st.secrets["db"]["DB_HOST"],
             port=st.secrets["db"]["DB_PORT"],
             sslmode='require',
-            sslrootcert='prod-ca-2021.crt'  # Archivo de certificado
+            sslrootcert='cert.crt',
+            # --- Forzar IPv4 ---
+            hostaddr='146.190.209.41'  # IP v4 de tu instancia Supabase*
         )
         return conn
     except Exception as e:
