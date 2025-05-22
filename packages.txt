@@ -1,3 +1,2 @@
-libpq5
 libpq-dev
 ca-certificates
