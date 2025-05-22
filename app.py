@@ -18,14 +18,14 @@ st.set_page_config(
 
 # Función para conectarse a la base de datos
 def get_db_connection():
-    conn = psycopg2.connect(
-        dbname='postgres', 
-        user='postgres', 
-        password='Ozzy153624+$',
-        host='db.dmgashfrjnhaduiifabr.supabase.co', 
-        port='5432'
+    return psycopg2.connect(
+        dbname=st.secrets.supabase.dbname,
+        user=st.secrets.supabase.user,
+        password=st.secrets.supabase.password,
+        host=st.secrets.supabase.host,
+        port=st.secrets.supabase.port,
+        sslmode='require'
     )
-    return conn
 
 # Función para obtener datos de sismos
 def fetch_sismos_data():
