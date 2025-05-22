@@ -26,11 +26,12 @@ def get_db_connection():
             password=os.environ.get('DB_PASSWORD'),
             host=os.environ.get('DB_HOST'),
             port=os.environ.get('DB_PORT'),
-            sslmode='require'  # Necesario para conexiones seguras
+            sslmode='require',  # Obligatorio para Supabase
+            sslrootcert='cert.crt'  # Certificado SSL (lo generamos después)
         )
         return conn
     except Exception as e:
-        st.error(f"Error de conexión a la base de datos: {str(e)}")
+        st.error(f"Error de conexión: {str(e)}")
         st.stop()
 
 # Función para obtener datos de sismos (AGREGADO MANEJO DE ERRORES)
