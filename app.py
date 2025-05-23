@@ -103,7 +103,7 @@ if not sismos_filtro.empty:
     for _, sismo in sismos_filtro.iterrows():
         folium.CircleMarker(
             location=[sismo['latitud'], sismo['longitud']],
-            radius=0.01 + sismo['magnitud'] * 1.5,
+            radius=2 + sismo['magnitud'] * 1.2,  # Tamaño proporcional a la magnitud
             popup=f"""
                 Fecha: {sismo['fecha'].strftime('%Y-%m-%d')}<br>
                 Hora: {sismo['hora']}<br>
@@ -112,7 +112,9 @@ if not sismos_filtro.empty:
             """,
             color='red',
             fill=True,
-            fill_color='red'
+            fill_color='red',
+            fill_opacity=0.3,  # Ajustar la opacidad del relleno
+            weight=0.5  # Grosor del borde
         ).add_to(m)
 
 folium_static(m)
