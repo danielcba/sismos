@@ -5,13 +5,8 @@ from streamlit_folium import folium_static
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
-import numpy as np
+from supabase import create_client
 from datetime import datetime
-import psycopg2
-import os  # Importar os para variables de entorno
-# Añade esto al principio de tu app.py
-import socket
-socket.getaddrinfo = lambda *args: [(socket.AF_INET6, socket.SOCK_STREAM, 0, "", (args[0], args[1]))]
 
 # Configuración de la página
 st.set_page_config(
@@ -20,75 +15,126 @@ st.set_page_config(
     layout="wide"
 )
 
-# Función para conectarse a la base de datos (MODIFICADO PARA STREAMLIT CLOUD)
-def get_db_connection():
-    try:
-        conn = psycopg2.connect(
-            dbname=st.secrets["db"]["DB_NAME"],
-            user=st.secrets["db"]["DB_USER"],
-            password=st.secrets["db"]["DB_PASSWORD"],
-            host=st.secrets["db"]["DB_HOST"],
-            port=st.secrets["db"]["DB_PORT"],
-            sslmode='require',
-            sslrootcert='cert.crt',
-            # --- Forzar IPv4 ---
-            hostaddr='146.190.209.41'  # IP v4 de tu instancia Supabase*
-        )
-        return conn
-    except Exception as e:
-        st.error(f"Error de conexión: {str(e)}")
-        st.stop()
+# Inicializar cliente Supabase
+SUPABASE_URL = "https://dmgashfrjnhaduiifabr.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZ2FzaGZyam5oYWR1aWlmYWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4OTc5MDMsImV4cCI6MjA2MjQ3MzkwM30.vEld_xzy8Vcsz-0wBzZpTviWOKWi_OklLfTNP7JXDfo"
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Función para obtener datos de sismos (AGREGADO MANEJO DE ERRORES)
+# Función para obtener datos de sismos
 def fetch_sismos_data():
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT fecha, hora, latitud, longitud, profundidad, magnitud
-            FROM sismos
-            ORDER BY fecha DESC, hora DESC
-        """)
-        data = cur.fetchall()
-        cur.close()
-        conn.close()
+        response = supabase.table('sismos').select(
+            "fecha, hora, latitud, longitud, profundidad, magnitud"
+        ).order("fecha", desc=True).order("hora", desc=True).execute()
         
-        # Convertir a DataFrame con verificación de datos
-        columns = ['fecha', 'hora', 'latitud', 'longitud', 'profundidad', 'magnitud']
-        df = pd.DataFrame(data, columns=columns)
+        df = pd.DataFrame(response.data)
         
-        # Conversión segura de fecha y hora
+        # Convertir fecha y hora a datetime
+        df['fecha'] = pd.to_datetime(df['fecha'])
+        df['hora'] = pd.to_datetime(df['hora'], format='%H:%M:%S').dt.time
         df['fecha_hora'] = pd.to_datetime(
-            df['fecha'].astype(str) + ' ' + df['hora'].astype(str),
-            errors='coerce'
+            df['fecha'].astype(str) + ' ' + df['hora'].astype(str)
         )
-        return df.dropna(subset=['fecha_hora'])
         
+        return df
+    
     except Exception as e:
-        st.error(f"Error al obtener datos: {str(e)}")
-        st.stop()
+        st.error(f"Error al cargar datos: {str(e)}")
+        return pd.DataFrame()
 
-# Obtener datos con loader
-with st.spinner('Cargando datos sísmicos...'):
-    sismos_df = fetch_sismos_data()
+# Obtener datos
+sismos_df = fetch_sismos_data()
 
-# [El resto del código se mantiene igual...]
+# Sidebar
+st.sidebar.title("Filtros")
+fecha_inicio = st.sidebar.date_input(
+    "Fecha inicial",
+    value=sismos_df['fecha'].min() if not sismos_df.empty else datetime.today()
+)
+fecha_fin = st.sidebar.date_input(
+    "Fecha final",
+    value=sismos_df['fecha'].max() if not sismos_df.empty else datetime.today()
+)
 
-# Al final de cada gráfico de matplotlib, agregar plt.close()
+# Filtrar datos por fecha
+if not sismos_df.empty:
+    sismos_filtro = sismos_df[
+        (sismos_df['fecha'] >= pd.to_datetime(fecha_inicio)) &
+        (sismos_df['fecha'] <= pd.to_datetime(fecha_fin))
+    ]
+else:
+    sismos_filtro = pd.DataFrame()
+
+# Título principal
+st.title("Monitor de Sismos en Córdoba")
+
+# Estadísticas básicas
+col1, col2, col3 = st.columns(3)
 with col1:
-    st.subheader("Distribución de Magnitudes")
-    fig, ax = plt.subplots()
-    sns.histplot(sismos_filtro['magnitud'], bins=20, kde=True)
-    ax.set_xlabel('Magnitud')
-    ax.set_ylabel('Frecuencia')
-    st.pyplot(fig)
-    plt.close(fig)  # Liberar memoria
-
+    st.metric("Número total de sismos", len(sismos_filtro))
 with col2:
-    st.subheader("Distribución de Profundidades")
-    fig, ax = plt.subplots()
-    sns.histplot(sismos_filtro['profundidad'], bins=20, kde=True)
-    ax.set_xlabel('Profundidad (km)')
-    ax.set_ylabel('Frecuencia')
-    st.pyplot(fig)
-    plt.close(fig)  # Liberar memoria
+    max_mag = sismos_filtro['magnitud'].max() if not sismos_filtro.empty else 0
+    st.metric("Magnitud máxima", f"{max_mag:.1f}")
+with col3:
+    prof_prom = sismos_filtro['profundidad'].mean() if not sismos_filtro.empty else 0
+    st.metric("Profundidad promedio", f"{prof_prom:.1f} km")
+
+# Mapa con los últimos sismos
+st.header("Mapa de Sismos")
+
+# Crear mapa centrado en Córdoba
+m = folium.Map(location=[-32.2935000, -64.1810500], zoom_start=6.3)
+
+if not sismos_filtro.empty:
+    for _, sismo in sismos_filtro.iterrows():
+        folium.CircleMarker(
+            location=[sismo['latitud'], sismo['longitud']],
+            radius=0.01 + sismo['magnitud'] * 1.5,
+            popup=f"""
+                Fecha: {sismo['fecha'].strftime('%Y-%m-%d')}<br>
+                Hora: {sismo['hora']}<br>
+                Magnitud: {sismo['magnitud']}<br>
+                Profundidad: {sismo['profundidad']} km
+            """,
+            color='red',
+            fill=True,
+            fill_color='red'
+        ).add_to(m)
+
+folium_static(m)
+
+# Gráficos de distribución
+st.header("Análisis de Datos")
+
+if not sismos_filtro.empty:
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Distribución de Magnitudes")
+        fig, ax = plt.subplots()
+        sns.histplot(sismos_filtro['magnitud'], bins=20, kde=True)
+        ax.set_xlabel('Magnitud')
+        ax.set_ylabel('Frecuencia')
+        st.pyplot(fig)
+
+    with col2:
+        st.subheader("Distribución de Profundidades")
+        fig, ax = plt.subplots()
+        sns.histplot(sismos_filtro['profundidad'], bins=20, kde=True)
+        ax.set_xlabel('Profundidad (km)')
+        ax.set_ylabel('Frecuencia')
+        st.pyplot(fig)
+
+# Gráfico de dispersión
+st.header("Relación Magnitud-Profundidad")
+if not sismos_filtro.empty:
+    fig = px.scatter(
+        sismos_filtro,
+        x='profundidad',
+        y='magnitud',
+        color='fecha',
+        hover_data=['fecha', 'hora'],
+        title='Magnitud vs Profundidad'
+    )
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.warning("No hay datos para mostrar en este rango de fechas")
