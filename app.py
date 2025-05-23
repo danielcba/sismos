@@ -23,11 +23,25 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # Función para obtener datos de sismos
 def fetch_sismos_data():
     try:
-        response = supabase.from_('sismos').select(
-            "fecha, hora, latitud, longitud, profundidad, magnitud"
-        ).order("fecha", desc=True).order("hora", desc=True).limit(1867)
+        # Obtener todos los registros usando paginación
+        page_size = 1000
+        offset = 0
+        all_data = []
         
-        df = pd.DataFrame(response.execute().data)
+        while True:
+            response = supabase.from_('sismos').select(
+                "fecha, hora, latitud, longitud, profundidad, magnitud"
+            ).order("fecha", desc=True).order("hora", desc=True).range(offset, offset + page_size - 1)
+            
+            data = response.execute().data
+            if not data:
+                break
+                
+            all_data.extend(data)
+            offset += page_size
+            
+        # Convertir a DataFrame
+        df = pd.DataFrame(all_data)
         
         # Convertir fecha y hora a datetime
         df['fecha'] = pd.to_datetime(df['fecha'])
