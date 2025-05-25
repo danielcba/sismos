@@ -61,6 +61,8 @@ sismos_df = fetch_sismos_data()
 
 # Sidebar
 st.sidebar.title("Filtros")
+
+# Filtros de fecha
 fecha_inicio = st.sidebar.date_input(
     "Fecha inicial",
     value=sismos_df['fecha'].min() if not sismos_df.empty else datetime.today(),
@@ -74,12 +76,75 @@ fecha_fin = st.sidebar.date_input(
     max_value=datetime(2025, 12, 31)  # Fecha máxima permitida
 )
 
-# Filtrar datos por fecha
+# Filtros de hora
+hora_inicio = st.sidebar.time_input(
+    "Hora inicial",
+    value=datetime.strptime("00:00:00", "%H:%M:%S").time()
+)
+hora_fin = st.sidebar.time_input(
+    "Hora final",
+    value=datetime.strptime("23:59:59", "%H:%M:%S").time()
+)
+
+# Filtros de magnitud
+magnitud_min = st.sidebar.number_input(
+    "Magnitud mínima",
+    min_value=0.0,
+    max_value=10.0,
+    value=0.0,
+    step=0.1
+)
+magnitud_max = st.sidebar.number_input(
+    "Magnitud máxima",
+    min_value=0.0,
+    max_value=10.0,
+    value=10.0,
+    step=0.1
+)
+
+# Filtros de profundidad
+profundidad_min = st.sidebar.number_input(
+    "Profundidad mínima (km)",
+    min_value=0.0,
+    max_value=1000.0,
+    value=0.0,
+    step=1.0
+)
+profundidad_max = st.sidebar.number_input(
+    "Profundidad máxima (km)",
+    min_value=0.0,
+    max_value=1000.0,
+    value=1000.0,
+    step=1.0
+)
+
+# Filtrar datos por todos los criterios
 if not sismos_df.empty:
-    sismos_filtro = sismos_df[
-        (sismos_df['fecha'] >= pd.to_datetime(fecha_inicio)) &
-        (sismos_df['fecha'] <= pd.to_datetime(fecha_fin))
-    ]
+    sismos_filtro = sismos_df.copy()
+    
+    # Filtro de fechas
+    if fecha_inicio:
+        sismos_filtro = sismos_filtro[sismos_filtro['fecha'] >= pd.to_datetime(fecha_inicio)]
+    if fecha_fin:
+        sismos_filtro = sismos_filtro[sismos_filtro['fecha'] <= pd.to_datetime(fecha_fin)]
+    
+    # Filtro de horas
+    if hora_inicio:
+        sismos_filtro = sismos_filtro[sismos_filtro['hora'] >= pd.to_datetime(hora_inicio.strftime('%H:%M:%S')).time()]
+    if hora_fin:
+        sismos_filtro = sismos_filtro[sismos_filtro['hora'] <= pd.to_datetime(hora_fin.strftime('%H:%M:%S')).time()]
+    
+    # Filtro de magnitud
+    if magnitud_min > 0:
+        sismos_filtro = sismos_filtro[sismos_filtro['magnitud'] >= magnitud_min]
+    if magnitud_max < 10:
+        sismos_filtro = sismos_filtro[sismos_filtro['magnitud'] <= magnitud_max]
+    
+    # Filtro de profundidad
+    if profundidad_min > 0:
+        sismos_filtro = sismos_filtro[sismos_filtro['profundidad'] >= profundidad_min]
+    if profundidad_max < 1000:
+        sismos_filtro = sismos_filtro[sismos_filtro['profundidad'] <= profundidad_max]
 else:
     sismos_filtro = pd.DataFrame()
 
