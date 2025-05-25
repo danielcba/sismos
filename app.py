@@ -120,7 +120,7 @@ profundidad_max = st.sidebar.number_input(
 
 # Filtrar datos por todos los criterios
 if not sismos_df.empty:
-    sismos_filtro = sismos_df.copy()
+    sismos_filtro = sismos_df.copy()  # Inicialmente copiamos el DataFrame
     
     # Filtro de fechas
     if fecha_inicio:
@@ -145,6 +145,10 @@ if not sismos_df.empty:
         sismos_filtro = sismos_filtro[sismos_filtro['profundidad'] >= profundidad_min]
     if profundidad_max < 1000:
         sismos_filtro = sismos_filtro[sismos_filtro['profundidad'] <= profundidad_max]
+    
+    # Si no se aplicaron filtros, usar el DataFrame original
+    if sismos_filtro.shape[0] == 0:
+        sismos_filtro = sismos_df.copy()
 else:
     sismos_filtro = pd.DataFrame()
 
