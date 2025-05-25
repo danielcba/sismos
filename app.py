@@ -64,12 +64,12 @@ st.sidebar.title("Filtros")
 fecha_inicio = st.sidebar.date_input(
     "Fecha inicial",
     value=sismos_df['fecha'].min() if not sismos_df.empty else datetime.today(),
-    max_value=datetime.now().date()
+    max_value=datetime(2025, 12, 31)
 )
 fecha_fin = st.sidebar.date_input(
     "Fecha final",
     value=sismos_df['fecha'].max() if not sismos_df.empty else datetime.today(),
-    max_value=datetime.now().date()
+    max_value=datetime(2025, 12, 31)
 )
 
 # Filtrar datos por fecha
