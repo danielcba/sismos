@@ -5,6 +5,7 @@ from streamlit_folium import folium_static
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
+import numpy as np
 from supabase import create_client
 from datetime import datetime
 
@@ -118,6 +119,33 @@ profundidad_max = st.sidebar.number_input(
     step=1.0
 )
 
+# Filtro de proximidad
+st.sidebar.subheader("Filtro de Proximidad")
+latitud = st.sidebar.number_input(
+    "Latitud",
+    min_value=-90.0,
+    max_value=90.0,
+    value=None,  # Valor por defecto None
+    step=0.001,  # 3 dígitos después de la coma
+    format="%.3f"  # Formato para mostrar 3 dígitos
+)
+longitud = st.sidebar.number_input(
+    "Longitud",
+    min_value=-180.0,
+    max_value=180.0,
+    value=None,  # Valor por defecto None
+    step=0.001,  # 3 dígitos después de la coma
+    format="%.3f"  # Formato para mostrar 3 dígitos
+)
+radio = st.sidebar.number_input(
+    "Radio de búsqueda (km)",
+    min_value=0.0,
+    max_value=1000.0,
+    value=0.0,  # Valor por defecto 0
+    step=0.1,   # 1 dígito después de la coma
+    format="%.1f"  # Formato para mostrar 1 dígito
+)
+
 # Filtrar datos por todos los criterios
 if not sismos_df.empty:
     sismos_filtro = sismos_df.copy()  # Inicialmente copiamos el DataFrame
@@ -145,6 +173,23 @@ if not sismos_df.empty:
         sismos_filtro = sismos_filtro[sismos_filtro['profundidad'] >= profundidad_min]
     if profundidad_max < 1000:
         sismos_filtro = sismos_filtro[sismos_filtro['profundidad'] <= profundidad_max]
+    
+    # Filtro de proximidad
+    if latitud is not None and longitud is not None and radio > 0:
+        # Convertir radio de km a grados (aproximadamente 111.32 km por grado)
+        radio_grados = radio / 111.32
+        
+        # Calcular distancia en grados
+        sismos_filtro['distancia'] = np.sqrt(
+            (sismos_filtro['latitud'] - latitud) ** 2 +
+            (sismos_filtro['longitud'] - longitud) ** 2
+        )
+        
+        # Filtrar por distancia
+        sismos_filtro = sismos_filtro[sismos_filtro['distancia'] <= radio_grados]
+        
+        # Agregar columna de distancia en km
+        sismos_filtro['distancia_km'] = sismos_filtro['distancia'] * 111.32
     
     # Si no se aplicaron filtros, usar el DataFrame original
     if sismos_filtro.shape[0] == 0:
