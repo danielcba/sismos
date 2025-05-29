@@ -21,6 +21,16 @@ SUPABASE_URL = "https://dmgashfrjnhaduiifabr.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZ2FzaGZyam5oYWR1aWlmYWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4OTc5MDMsImV4cCI6MjA2MjQ3MzkwM30.vEld_xzy8Vcsz-0wBzZpTviWOKWi_OklLfTNP7JXDfo"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# Función para mostrar mensajes de estado
+def mostrar_mensaje_estado(resultado, tipo_filtro=None):
+    if resultado.empty:
+        mensaje = "No se encontraron sismos"
+        if tipo_filtro:
+            mensaje += f" que cumplan con los criterios de {tipo_filtro}"
+        st.warning(mensaje)
+        return False
+    return True
+
 # Función para obtener datos de sismos
 def fetch_sismos_data():
     try:
@@ -149,30 +159,39 @@ radio = st.sidebar.number_input(
 # Filtrar datos por todos los criterios
 if not sismos_df.empty:
     sismos_filtro = sismos_df.copy()  # Inicialmente copiamos el DataFrame
+    filtros_aplicados = []  # Lista para rastrear qué filtros se aplican
     
     # Filtro de fechas
     if fecha_inicio:
         sismos_filtro = sismos_filtro[sismos_filtro['fecha'] >= pd.to_datetime(fecha_inicio)]
+        filtros_aplicados.append("fecha")
     if fecha_fin:
         sismos_filtro = sismos_filtro[sismos_filtro['fecha'] <= pd.to_datetime(fecha_fin)]
+        filtros_aplicados.append("fecha")
     
     # Filtro de horas
     if hora_inicio:
         sismos_filtro = sismos_filtro[sismos_filtro['hora'] >= pd.to_datetime(hora_inicio.strftime('%H:%M:%S')).time()]
+        filtros_aplicados.append("hora")
     if hora_fin:
         sismos_filtro = sismos_filtro[sismos_filtro['hora'] <= pd.to_datetime(hora_fin.strftime('%H:%M:%S')).time()]
+        filtros_aplicados.append("hora")
     
     # Filtro de magnitud
     if magnitud_min > 0:
         sismos_filtro = sismos_filtro[sismos_filtro['magnitud'] >= magnitud_min]
+        filtros_aplicados.append("magnitud")
     if magnitud_max < 10:
         sismos_filtro = sismos_filtro[sismos_filtro['magnitud'] <= magnitud_max]
+        filtros_aplicados.append("magnitud")
     
     # Filtro de profundidad
     if profundidad_min > 0:
         sismos_filtro = sismos_filtro[sismos_filtro['profundidad'] >= profundidad_min]
+        filtros_aplicados.append("profundidad")
     if profundidad_max < 1000:
         sismos_filtro = sismos_filtro[sismos_filtro['profundidad'] <= profundidad_max]
+        filtros_aplicados.append("profundidad")
     
     # Filtro de proximidad
     if latitud is not None and longitud is not None and radio > 0:
@@ -190,10 +209,14 @@ if not sismos_df.empty:
         
         # Agregar columna de distancia en km
         sismos_filtro['distancia_km'] = sismos_filtro['distancia'] * 111.32
+        filtros_aplicados.append("proximidad")
     
     # Si no se aplicaron filtros, usar el DataFrame original
-    if sismos_filtro.shape[0] == 0:
-        sismos_filtro = sismos_df.copy()
+    if not filtros_aplicados:  # Si no se aplicaron filtros
+        sismos_filtro = sismos_df.copy()  # Mantener todos los datos
+    elif sismos_filtro.shape[0] == 0:  # Si se aplicaron filtros pero no hay resultados
+        tipo_filtro = filtros_aplicados[0]  # Usar el primer filtro aplicado para el mensaje
+        mostrar_mensaje_estado(sismos_filtro, tipo_filtro)
 else:
     sismos_filtro = pd.DataFrame()
 
@@ -201,24 +224,22 @@ else:
 st.title("Monitor de Sismos en Córdoba")
 
 # Estadísticas básicas
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric("Número total de sismos", len(sismos_filtro))
-with col2:
-    max_mag = sismos_filtro['magnitud'].max() if not sismos_filtro.empty else 0
-    st.metric("Magnitud máxima", f"{max_mag:.1f}")
-with col3:
-    prof_prom = sismos_filtro['profundidad'].mean() if not sismos_filtro.empty else 0
-    st.metric("Profundidad promedio", f"{prof_prom:.1f} km")
+st.sidebar.header("Estadísticas")
+if mostrar_mensaje_estado(sismos_filtro, "fecha"):
+    st.sidebar.write(f"Total de sismos: {len(sismos_filtro)}")
+    st.sidebar.write(f"Magnitud máxima: {sismos_filtro['magnitud'].max():.2f}")
+    st.sidebar.write(f"Magnitud mínima: {sismos_filtro['magnitud'].min():.2f}")
+    st.sidebar.write(f"Profundidad máxima: {sismos_filtro['profundidad'].max():.2f} km")
+    st.sidebar.write(f"Profundidad mínima: {sismos_filtro['profundidad'].min():.2f} km")
 
-# Mapa con los últimos sismos
-st.header("Mapa de Sismos")
-
-# Crear mapa centrado en Córdoba
-m = folium.Map(location=[-32.2935000, -64.1810500], zoom_start=6.3)
-
-if not sismos_filtro.empty:
-    for _, sismo in sismos_filtro.iterrows():
+# Mapa
+st.header("Ubicación de los Sismos")
+if mostrar_mensaje_estado(sismos_filtro, "proximidad"):
+    # Crear mapa centrado en Córdoba
+    m = folium.Map(location=[-32.2935000, -64.1810500], zoom_start=6)
+    
+    # Añadir marcadores para cada sismo
+    for _,sismo in sismos_filtro.iterrows():
         folium.CircleMarker(
             location=[sismo['latitud'], sismo['longitud']],
             radius=2 + sismo['magnitud'] * 1.2,  # Tamaño proporcional a la magnitud
@@ -232,26 +253,30 @@ if not sismos_filtro.empty:
             fill=True,
             fill_color='red',
             fill_opacity=0.3,  # Ajustar la opacidad del relleno
-            weight=0.5  # Grosor del borde
+            weight=0.5,  # Grosor del borde
         ).add_to(m)
+    
+    # Mostrar mapa
+    folium_static(m)
 
-folium_static(m)
-
-# Gráficos de distribución
+# Gráficos
 st.header("Análisis de Datos")
 
-if not sismos_filtro.empty:
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Distribución de Magnitudes")
+# Distribución de magnitudes y profundidades
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("Distribución de Magnitudes")
+    if mostrar_mensaje_estado(sismos_filtro, "magnitud"):
         fig, ax = plt.subplots()
         sns.histplot(sismos_filtro['magnitud'], bins=20, kde=True)
         ax.set_xlabel('Magnitud')
         ax.set_ylabel('Frecuencia')
         st.pyplot(fig)
 
-    with col2:
-        st.subheader("Distribución de Profundidades")
+with col2:
+    st.subheader("Distribución de Profundidades")
+    if mostrar_mensaje_estado(sismos_filtro, "profundidad"):
         fig, ax = plt.subplots()
         sns.histplot(sismos_filtro['profundidad'], bins=20, kde=True)
         ax.set_xlabel('Profundidad (km)')
@@ -260,7 +285,7 @@ if not sismos_filtro.empty:
 
 # Gráfico de dispersión
 st.header("Relación Magnitud-Profundidad")
-if not sismos_filtro.empty:
+if mostrar_mensaje_estado(sismos_filtro, "relación magnitud-profundidad"):
     fig = px.scatter(
         sismos_filtro,
         x='profundidad',
@@ -270,5 +295,4 @@ if not sismos_filtro.empty:
         title='Magnitud vs Profundidad'
     )
     st.plotly_chart(fig, use_container_width=True)
-else:
-    st.warning("No hay datos para mostrar en este rango de fechas")
+    #st.warning("No hay datos para mostrar en este rango de fechas")
