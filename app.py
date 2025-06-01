@@ -262,26 +262,92 @@ if mostrar_mensaje_estado(sismos_filtro, "proximidad"):
 # Gráficos
 st.header("Análisis de Datos")
 
-# Distribución de magnitudes y profundidades
-col1, col2 = st.columns(2)
+# Distribución de magnitudes y profundidades con sus medias
+st.header("Distribuciones y Medias")
 
-with col1:
-    st.subheader("Distribución de Magnitudes")
-    if mostrar_mensaje_estado(sismos_filtro, "magnitud"):
-        fig, ax = plt.subplots()
-        sns.histplot(sismos_filtro['magnitud'], bins=20, kde=True)
-        ax.set_xlabel('Magnitud')
-        ax.set_ylabel('Frecuencia')
-        st.pyplot(fig)
+# Configurar estilo oscuro global
+plt.style.use('dark_background')
+plt.rcParams.update({
+    'axes.facecolor': 'black',
+    'figure.facecolor': 'black',
+    'text.color': 'white',
+    'axes.labelcolor': 'white',
+    'xtick.color': 'white',
+    'ytick.color': 'white',
+    'axes.edgecolor': 'white',
+    'grid.color': 'gray',
+    'grid.alpha': 0.1,
+    'grid.linestyle': '-',
+    'lines.linewidth': 0.2
+})
 
-with col2:
-    st.subheader("Distribución de Profundidades")
-    if mostrar_mensaje_estado(sismos_filtro, "profundidad"):
-        fig, ax = plt.subplots()
-        sns.histplot(sismos_filtro['profundidad'], bins=20, kde=True)
-        ax.set_xlabel('Profundidad (km)')
-        ax.set_ylabel('Frecuencia')
-        st.pyplot(fig)
+# Gráfico de magnitudes
+st.subheader("Magnitud de los sismos en la escala Richter")
+if mostrar_mensaje_estado(sismos_filtro, "magnitud"):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Ordenar datos por fecha
+    sismos_ordenados = sismos_filtro.sort_values('fecha')
+    
+    # Graficar la línea de magnitudes
+    ax.plot(range(len(sismos_ordenados)), sismos_ordenados['magnitud'], 
+           linewidth=0.2, color='green', label='Magnitud')
+    
+    # Calcular y mostrar la media
+    media_magnitud = sismos_ordenados['magnitud'].mean()
+    ax.axhline(media_magnitud, color='white', linestyle='--', 
+              linewidth=0.2, label=f'Media: {media_magnitud:.2f}')
+    
+    # Configurar el gráfico
+    ax.set_title('Magnitud de los sismos en la escala Richter', color='white')
+    ax.set_xlabel('Total de sismos', color='white')
+    ax.set_ylabel('Magnitud', color='white')
+    
+    # Añadir leyenda y cuadrícula
+    ax.legend()
+    ax.grid(True, linestyle='-', alpha=0.1)
+    
+    # Configurar colores de los ejes
+    ax.tick_params(colors='white')
+    for spine in ax.spines.values():
+        spine.set_edgecolor('white')
+    
+    # Mostrar gráfico
+    st.pyplot(fig)
+
+# Gráfico de profundidades
+st.subheader("Profundidad de los sismos en Km")
+if mostrar_mensaje_estado(sismos_filtro, "profundidad"):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Ordenar datos por fecha
+    sismos_ordenados = sismos_filtro.sort_values('fecha')
+    
+    # Graficar la línea de profundidades
+    ax.plot(range(len(sismos_ordenados)), sismos_ordenados['profundidad'], 
+           linewidth=0.2, color='green', label='Profundidad')
+    
+    # Calcular y mostrar la media
+    media_profundidad = sismos_ordenados['profundidad'].mean()
+    ax.axhline(media_profundidad, color='white', linestyle='--', 
+              linewidth=0.2, label=f'Media: {media_profundidad:.2f}')
+    
+    # Configurar el gráfico
+    ax.set_title('Profundidad de los sismos en Km', color='white')
+    ax.set_xlabel('Total de sismos', color='white')
+    ax.set_ylabel('Profundidad (km)', color='white')
+    
+    # Añadir leyenda y cuadrícula
+    ax.legend()
+    ax.grid(True, linestyle='-', alpha=0.1)
+    
+    # Configurar colores de los ejes
+    ax.tick_params(colors='white')
+    for spine in ax.spines.values():
+        spine.set_edgecolor('white')
+    
+    # Mostrar gráfico
+    st.pyplot(fig)
 
 # Gráfico de dispersión
 st.header("Relación Magnitud-Profundidad")
@@ -295,4 +361,3 @@ if mostrar_mensaje_estado(sismos_filtro, "relación magnitud-profundidad"):
         title='Magnitud vs Profundidad'
     )
     st.plotly_chart(fig, use_container_width=True)
-    #st.warning("No hay datos para mostrar en este rango de fechas")
