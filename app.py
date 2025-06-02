@@ -73,7 +73,19 @@ def fetch_sismos_data():
 sismos_df = fetch_sismos_data()
 
 # Sidebar
-st.sidebar.title("Filtros")
+st.sidebar.markdown("<h1 style='margin-bottom: 0;'>Filtros</h1>", unsafe_allow_html=True)
+
+# Ajustar el espaciado entre los elementos del sidebar
+st.sidebar.markdown("""
+<style>
+.sidebar .sidebar-content {
+    padding-top: 0;
+}
+.sidebar .stDateInput, .sidebar .stTimeInput {
+    margin-bottom: 0.5rem;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # Filtros de fecha
 fecha_inicio = st.sidebar.date_input(
