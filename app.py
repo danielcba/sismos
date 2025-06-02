@@ -1,30 +1,70 @@
-import streamlit as st
-import pandas as pd
-import folium
+from datetime import datetime  # Para manejo de fechas
+from supabase import create_client  # Cliente para conectar con Supabase
+import mplcursors  # Para mejorar interactividad en gráficos de matplotlib
+import numpy as np  # Para cálculos numéricos
+import plotly.express as px  # Para gráficos interactivos
+import seaborn as sns  # Para visualización de datos
+import matplotlib.pyplot as plt  # Para gráficos estáticos
+# Para mostrar mapas de Folium en Streamlit
 from streamlit_folium import folium_static
-import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly.express as px
-import numpy as np
-import mplcursors
-from supabase import create_client
-from datetime import datetime
+import folium  # Para crear mapas interactivos
+import pandas as pd  # Para manipulación de datos
+import streamlit as st  # Para crear la aplicación web
+import streamlit as st
+
+# Importar bibliotecas necesarias
 
 
-# Configuración de la página
-st.set_page_config(
-    page_title="Sismos en Córdoba",
-    page_icon="quake",
-    layout="wide"
+# Aplicar CSS personalizado para quitar el padding superior del sidebar
+st.sidebar.markdown(
+    """
+    <style>
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 0;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
-# Inicializar cliente Supabase
+# =============================================
+# CONFIGURACIÓN INICIAL DE LA APLICACIÓN
+# =============================================
+
+# Configurar propiedades de la página de Streamlit
+st.set_page_config(
+    page_title="Sismos en Córdoba",  # Título de la pestaña del navegador
+    page_icon="quake",  # Ícono (emoji de terremoto)
+    layout="wide"  # Diseño amplio para usar todo el ancho
+)
+
+# =============================================
+# CONEXIÓN A LA BASE DE DATOS SUPABASE
+# =============================================
+
+# Credenciales de Supabase (base de datos PostgreSQL en la nube)
 SUPABASE_URL = "https://dmgashfrjnhaduiifabr.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZ2FzaGZyam5oYWR1aWlmYWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4OTc5MDMsImV4cCI6MjA2MjQ3MzkwM30.vEld_xzy8Vcsz-0wBzZpTviWOKWi_OklLfTNP7JXDfo"
+
+# Crear cliente de Supabase
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Función para mostrar mensajes de estado
+# =============================================
+# FUNCIONES AUXILIARES
+# =============================================
+
+
 def mostrar_mensaje_estado(resultado, tipo_filtro=None):
+    """
+    Muestra un mensaje de advertencia si no hay datos después de aplicar filtros.
+
+    Parámetros:
+        resultado (DataFrame): Conjunto de datos filtrados
+        tipo_filtro (str): Tipo de filtro aplicado (para mensaje personalizado)
+
+    Retorna:
+        bool: True si hay datos, False si no hay datos
+    """
     if resultado.empty:
         mensaje = "No se encontraron sismos"
         if tipo_filtro:
@@ -33,49 +73,75 @@ def mostrar_mensaje_estado(resultado, tipo_filtro=None):
         return False
     return True
 
-# Función para obtener datos de sismos
+
 def fetch_sismos_data():
+    """
+    Obtiene datos de sismos desde Supabase usando paginación.
+
+    Retorna:
+        DataFrame: Datos de sismos con columnas procesadas
+    """
     try:
-        # Obtener todos los registros usando paginación
-        page_size = 1000
-        offset = 0
-        all_data = []
-        
+        # Configuración de paginación para manejar grandes conjuntos de datos
+        page_size = 1000  # Cantidad de registros por página
+        offset = 0  # Desplazamiento inicial
+        all_data = []  # Almacenará todos los registros
+
         while True:
+            # Consulta a Supabase con ordenamiento y rango
             response = supabase.from_('sismos').select(
                 "fecha, hora, latitud, longitud, profundidad, magnitud"
             ).order("fecha", desc=True).order("hora", desc=True).range(offset, offset + page_size - 1)
-            
+
+            # Obtener datos de la consulta
             data = response.execute().data
+
+            # Salir del bucle si no hay más datos
             if not data:
                 break
-                
+
+            # Acumular datos
             all_data.extend(data)
+            # Avanzar al siguiente lote
             offset += page_size
-            
-        # Convertir a DataFrame
+
+        # Crear DataFrame con todos los datos
         df = pd.DataFrame(all_data)
-        
-        # Convertir fecha y hora a datetime
+
+        # Procesamiento de fechas y horas:
+        # Convertir columna 'fecha' a datetime
         df['fecha'] = pd.to_datetime(df['fecha'])
+        # Convertir columna 'hora' a objeto time
         df['hora'] = pd.to_datetime(df['hora'], format='%H:%M:%S').dt.time
+        # Crear columna combinada de fecha y hora
         df['fecha_hora'] = pd.to_datetime(
             df['fecha'].astype(str) + ' ' + df['hora'].astype(str)
         )
-        
-        return df
-    
-    except Exception as e:
-        st.error(f"Error al cargar datos: {str(e)}")
-        return pd.DataFrame()
 
-# Obtener datos
+        return df
+
+    except Exception as e:
+        # Manejo de errores en la carga de datos
+        st.error(f"Error al cargar datos: {str(e)}")
+        return pd.DataFrame()  # Retorna DataFrame vacío en caso de error
+
+# =============================================
+# CARGA DE DATOS
+# =============================================
+
+
+# Obtener datos de sismos desde Supabase
 sismos_df = fetch_sismos_data()
 
-# Sidebar
-st.sidebar.markdown("<h1 style='margin-bottom: 0;'>Filtros</h1>", unsafe_allow_html=True)
+# =============================================
+# BARRA LATERAL (SIDEBAR) - FILTROS
+# =============================================
 
-# Ajustar el espaciado entre los elementos del sidebar
+# Título del sidebar con estilo HTML
+st.sidebar.markdown(
+    "<h1 style='margin-bottom: 0;'>Filtros</h1>", unsafe_allow_html=True)
+
+# Estilos CSS personalizados para el sidebar
 st.sidebar.markdown("""
 <style>
 .sidebar .sidebar-content {
@@ -87,306 +153,373 @@ st.sidebar.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ----------------------------
 # Filtros de fecha
+# ----------------------------
 fecha_inicio = st.sidebar.date_input(
     "Fecha inicial",
-    value=sismos_df['fecha'].min() if not sismos_df.empty else datetime.today(),
-    min_value=datetime(2011, 6, 12),  # Fecha mínima de los datos
-    max_value=datetime(2025, 12, 31)  # Fecha máxima permitida
-)
-fecha_fin = st.sidebar.date_input(
-    "Fecha final",
-    value=sismos_df['fecha'].max() if not sismos_df.empty else datetime.today(),
-    min_value=fecha_inicio,  # La fecha final no puede ser anterior a la fecha inicial
-    max_value=datetime(2025, 12, 31)  # Fecha máxima permitida
+    value=sismos_df['fecha'].min(
+    ) if not sismos_df.empty else datetime.today(),
+    min_value=datetime(2011, 6, 12),  # Fecha mínima histórica
+    max_value=datetime(2025, 12, 31)   # Fecha máxima permitida
 )
 
+fecha_fin = st.sidebar.date_input(
+    "Fecha final",
+    value=sismos_df['fecha'].max(
+    ) if not sismos_df.empty else datetime.today(),
+    min_value=fecha_inicio,  # No puede ser anterior a fecha inicial
+    max_value=datetime(2025, 12, 31)
+)
+
+# ----------------------------
 # Filtros de hora
+# ----------------------------
 hora_inicio = st.sidebar.time_input(
     "Hora inicial",
+    # Valor predeterminado: media noche
     value=datetime.strptime("00:00:00", "%H:%M:%S").time()
 )
+
 hora_fin = st.sidebar.time_input(
     "Hora final",
+    # Valor predeterminado: fin de día
     value=datetime.strptime("23:59:59", "%H:%M:%S").time()
 )
 
-# Filtros de magnitud
+# ----------------------------
+# Filtros de magnitud (escala Richter)
+# ----------------------------
 magnitud_min = st.sidebar.number_input(
     "Magnitud mínima",
-    min_value=0.0,
-    max_value=10.0,
-    value=0.0,
-    step=0.1
+    min_value=0.0,     # Valor mínimo posible
+    max_value=10.0,    # Valor máximo teórico
+    value=0.0,         # Valor predeterminado
+    step=0.1           # Incremento/decremento
 )
+
 magnitud_max = st.sidebar.number_input(
     "Magnitud máxima",
     min_value=0.0,
     max_value=10.0,
-    value=10.0,
+    value=10.0,        # Valor predeterminado (máximo)
     step=0.1
 )
 
-# Filtros de profundidad
+# ----------------------------
+# Filtros de profundidad (kilómetros)
+# ----------------------------
 profundidad_min = st.sidebar.number_input(
     "Profundidad mínima (km)",
-    min_value=0.0,
-    max_value=1000.0,
+    min_value=0.0,      # Superficie
+    max_value=1000.0,   # Valor máximo razonable
     value=0.0,
     step=1.0
 )
+
 profundidad_max = st.sidebar.number_input(
     "Profundidad máxima (km)",
     min_value=0.0,
     max_value=1000.0,
-    value=1000.0,
+    value=1000.0,       # Valor predeterminado (máximo)
     step=1.0
 )
 
-# Filtro de proximidad
+# ----------------------------
+# Filtro de proximidad geográfica
+# ----------------------------
 st.sidebar.subheader("Filtro de Proximidad")
+
+# Input para latitud con precisión de 3 decimales
 latitud = st.sidebar.number_input(
     "Latitud",
-    min_value=-90.0,
+    min_value=-90.0,    # Rango válido de latitudes
     max_value=90.0,
-    value=None,  # Valor por defecto None
-    step=0.001,  # 3 dígitos después de la coma
-    format="%.3f"  # Formato para mostrar 3 dígitos
-)
-longitud = st.sidebar.number_input(
-    "Longitud",
-    min_value=-180.0,
-    max_value=180.0,
-    value=None,  # Valor por defecto None
-    step=0.001,  # 3 dígitos después de la coma
-    format="%.3f"  # Formato para mostrar 3 dígitos
-)
-radio = st.sidebar.number_input(
-    "Radio de búsqueda (km)",
-    min_value=0.0,
-    max_value=1000.0,
-    value=0.0,  # Valor por defecto 0
-    step=0.1,   # 1 dígito después de la coma
-    format="%.1f"  # Formato para mostrar 1 dígito
+    value=None,         # Sin valor predeterminado
+    step=0.001,         # Precisión de 3 decimales
+    format="%.3f"       # Formato de visualización
 )
 
-# Filtrar datos por todos los criterios
+# Input para longitud con precisión de 3 decimales
+longitud = st.sidebar.number_input(
+    "Longitud",
+    min_value=-180.0,   # Rango válido de longitudes
+    max_value=180.0,
+    value=None,
+    step=0.001,
+    format="%.3f"
+)
+
+# Radio de búsqueda en kilómetros
+radio = st.sidebar.number_input(
+    "Radio de búsqueda (km)",
+    min_value=0.0,      # Radio mínimo (0 = mismo punto)
+    max_value=1000.0,   # Radio máximo permitido
+    value=0.0,          # Valor predeterminado (desactivado)
+    step=0.1,           # Precisión de 1 decimal
+    format="%.1f"
+)
+
+# =============================================
+# APLICACIÓN DE FILTROS AL DATASET
+# =============================================
+
+# Solo procesar si hay datos disponibles
 if not sismos_df.empty:
-    sismos_filtro = sismos_df.copy()  # Inicialmente copiamos el DataFrame
-    filtros_aplicados = []  # Lista para rastrear qué filtros se aplican
-    
-    # Filtro de fechas
+    # Copia del DataFrame original para aplicar filtros
+    sismos_filtro = sismos_df.copy()
+    # Lista para rastrear qué tipos de filtros se aplicaron
+    filtros_aplicados = []
+
+    # Filtro de fechas (rango)
     if fecha_inicio:
-        sismos_filtro = sismos_filtro[sismos_filtro['fecha'] >= pd.to_datetime(fecha_inicio)]
+        sismos_filtro = sismos_filtro[sismos_filtro['fecha'] >= pd.to_datetime(
+            fecha_inicio)]
         filtros_aplicados.append("fecha")
     if fecha_fin:
-        sismos_filtro = sismos_filtro[sismos_filtro['fecha'] <= pd.to_datetime(fecha_fin)]
+        sismos_filtro = sismos_filtro[sismos_filtro['fecha'] <= pd.to_datetime(
+            fecha_fin)]
         filtros_aplicados.append("fecha")
-    
-    # Filtro de horas
+
+    # Filtro de horas (rango)
     if hora_inicio:
-        sismos_filtro = sismos_filtro[sismos_filtro['hora'] >= pd.to_datetime(hora_inicio.strftime('%H:%M:%S')).time()]
+        # Convertir a objeto time para comparación
+        hora_inicio_obj = pd.to_datetime(
+            hora_inicio.strftime('%H:%M:%S')).time()
+        sismos_filtro = sismos_filtro[sismos_filtro['hora'] >= hora_inicio_obj]
         filtros_aplicados.append("hora")
     if hora_fin:
-        sismos_filtro = sismos_filtro[sismos_filtro['hora'] <= pd.to_datetime(hora_fin.strftime('%H:%M:%S')).time()]
+        hora_fin_obj = pd.to_datetime(hora_fin.strftime('%H:%M:%S')).time()
+        sismos_filtro = sismos_filtro[sismos_filtro['hora'] <= hora_fin_obj]
         filtros_aplicados.append("hora")
-    
-    # Filtro de magnitud
+
+    # Filtro de magnitud (rango)
     if magnitud_min > 0:
-        sismos_filtro = sismos_filtro[sismos_filtro['magnitud'] >= magnitud_min]
+        sismos_filtro = sismos_filtro[sismos_filtro['magnitud']
+                                      >= magnitud_min]
         filtros_aplicados.append("magnitud")
     if magnitud_max < 10:
-        sismos_filtro = sismos_filtro[sismos_filtro['magnitud'] <= magnitud_max]
+        sismos_filtro = sismos_filtro[sismos_filtro['magnitud']
+                                      <= magnitud_max]
         filtros_aplicados.append("magnitud")
-    
-    # Filtro de profundidad
+
+    # Filtro de profundidad (rango)
     if profundidad_min > 0:
-        sismos_filtro = sismos_filtro[sismos_filtro['profundidad'] >= profundidad_min]
+        sismos_filtro = sismos_filtro[sismos_filtro['profundidad']
+                                      >= profundidad_min]
         filtros_aplicados.append("profundidad")
     if profundidad_max < 1000:
-        sismos_filtro = sismos_filtro[sismos_filtro['profundidad'] <= profundidad_max]
+        sismos_filtro = sismos_filtro[sismos_filtro['profundidad']
+                                      <= profundidad_max]
         filtros_aplicados.append("profundidad")
-    
-    # Filtro de proximidad
+
+    # Filtro de proximidad geográfica (solo si se proporcionan coordenadas y radio)
     if latitud is not None and longitud is not None and radio > 0:
-        # Convertir radio de km a grados (aproximadamente 111.32 km por grado)
+        # Conversión de kilómetros a grados (aproximación)
+        # 111.32 km ≈ 1 grado de latitud/longitud
         radio_grados = radio / 111.32
-        
-        # Calcular distancia en grados
+
+        # Cálculo de distancia euclidiana en grados
         sismos_filtro['distancia'] = np.sqrt(
             (sismos_filtro['latitud'] - latitud) ** 2 +
             (sismos_filtro['longitud'] - longitud) ** 2
         )
-        
-        # Filtrar por distancia
-        sismos_filtro = sismos_filtro[sismos_filtro['distancia'] <= radio_grados]
-        
-        # Agregar columna de distancia en km
+
+        # Filtrar eventos dentro del radio
+        sismos_filtro = sismos_filtro[sismos_filtro['distancia']
+                                      <= radio_grados]
+
+        # Convertir distancia a kilómetros para visualización
         sismos_filtro['distancia_km'] = sismos_filtro['distancia'] * 111.32
         filtros_aplicados.append("proximidad")
-    
-    # Si no se aplicaron filtros, usar el DataFrame original
-    if not filtros_aplicados:  # Si no se aplicaron filtros
-        sismos_filtro = sismos_df.copy()  # Mantener todos los datos
-    elif sismos_filtro.shape[0] == 0:  # Si se aplicaron filtros pero no hay resultados
-        tipo_filtro = filtros_aplicados[0]  # Usar el primer filtro aplicado para el mensaje
+
+    # Manejo de casos especiales:
+    # - Si no se aplicó ningún filtro, mostrar todos los datos
+    # - Si se aplicaron filtros pero no hay resultados, mostrar advertencia
+    if not filtros_aplicados:
+        sismos_filtro = sismos_df.copy()  # Mostrar dataset completo
+    elif sismos_filtro.shape[0] == 0:
+        # Mostrar mensaje específico para el primer filtro aplicado
+        tipo_filtro = filtros_aplicados[0]
         mostrar_mensaje_estado(sismos_filtro, tipo_filtro)
 else:
+    # Si no hay datos iniciales, crear DataFrame vacío
     sismos_filtro = pd.DataFrame()
 
-# Título principal
+# =============================================
+# INTERFAZ PRINCIPAL
+# =============================================
+
+# Título principal de la aplicación
 st.title("Monitor de Sismos en Córdoba")
 
-# Estadísticas básicas
+# =============================================
+# ESTADÍSTICAS EN EL SIDEBAR
+# =============================================
+
+# Estadísticas básicas (solo se muestran si hay datos filtrados)
 st.sidebar.header("Estadísticas")
 if mostrar_mensaje_estado(sismos_filtro, "fecha"):
     st.sidebar.write(f"Total de sismos: {len(sismos_filtro)}")
     st.sidebar.write(f"Magnitud máxima: {sismos_filtro['magnitud'].max():.2f}")
     st.sidebar.write(f"Magnitud mínima: {sismos_filtro['magnitud'].min():.2f}")
-    st.sidebar.write(f"Profundidad máxima: {sismos_filtro['profundidad'].max():.2f} km")
-    st.sidebar.write(f"Profundidad mínima: {sismos_filtro['profundidad'].min():.2f} km")
+    st.sidebar.write(
+        f"Profundidad máxima: {sismos_filtro['profundidad'].max():.2f} km")
+    st.sidebar.write(
+        f"Profundidad mínima: {sismos_filtro['profundidad'].min():.2f} km")
 
-# Mapa
+# =============================================
+# SECCIÓN DEL MAPA INTERACTIVO
+# =============================================
+
 st.header("Ubicación de los Sismos")
 if mostrar_mensaje_estado(sismos_filtro, "proximidad"):
-    # Crear mapa centrado en Córdoba
+    # Crear mapa centrado en Córdoba, Argentina
     m = folium.Map(location=[-32.2935000, -64.1810500], zoom_start=6)
-    
-    # Añadir marcadores para cada sismo
-    for _,sismo in sismos_filtro.iterrows():
+
+    # Añadir marcadores circulares para cada sismo
+    for _, sismo in sismos_filtro.iterrows():
         folium.CircleMarker(
             location=[sismo['latitud'], sismo['longitud']],
-            radius=2 + sismo['magnitud'] * 1.2,  # Tamaño proporcional a la magnitud
+            # Radio proporcional a la magnitud
+            radius=2 + sismo['magnitud'] * 1.2,
+            # Popup con información detallada
             popup=f"""
                 Fecha: {sismo['fecha'].strftime('%Y-%m-%d')}<br>
                 Hora: {sismo['hora']}<br>
                 Magnitud: {sismo['magnitud']}<br>
                 Profundidad: {sismo['profundidad']} km
             """,
-            color='red',
-            fill=True,
-            fill_color='red',
-            fill_opacity=0.3,  # Ajustar la opacidad del relleno
-            weight=0.5,  # Grosor del borde
+            color='red',         # Color del borde
+            fill=True,           # Rellenar el círculo
+            fill_color='red',    # Color de relleno
+            fill_opacity=0.3,    # Transparencia del relleno
+            weight=0.5           # Grosor del borde
         ).add_to(m)
-    
-    # Mostrar mapa
+
+    # Mostrar el mapa en la aplicación
     folium_static(m)
 
-# Gráficos
+# =============================================
+# SECCIÓN DE GRÁFICOS ANALÍTICOS
+# =============================================
+
 st.header("Análisis de Datos")
 
-# Distribución de magnitudes y profundidades con sus medias
-st.header("Distribuciones y Medias")
-
-# Configurar estilo oscuro global
-plt.style.use('dark_background')
+# ----------------------------
+# Configuración estética global para gráficos
+# ----------------------------
+plt.style.use('dark_background')  # Usar tema oscuro
 plt.rcParams.update({
-    'axes.facecolor': 'black',
-    'figure.facecolor': 'black',
-    'text.color': 'white',
-    'axes.labelcolor': 'white',
-    'xtick.color': 'white',
-    'ytick.color': 'white',
-    'axes.edgecolor': 'white',
-    'grid.color': 'gray',
-    'grid.alpha': 0.1,
-    'grid.linestyle': '-',
-    'lines.linewidth': 0.2
+    'axes.facecolor': 'black',      # Fondo de ejes negro
+    'figure.facecolor': 'black',    # Fondo de figura negro
+    'text.color': 'white',           # Color de texto blanco
+    'axes.labelcolor': 'white',      # Color de etiquetas de ejes
+    'xtick.color': 'white',          # Color de marcas en eje X
+    'ytick.color': 'white',          # Color de marcas en eje Y
+    'axes.edgecolor': 'white',       # Color de bordes de ejes
+    'grid.color': 'gray',            # Color de la grilla
+    'grid.alpha': 0.1,               # Transparencia de la grilla
+    'grid.linestyle': '-',           # Estilo de línea de la grilla
+    'lines.linewidth': 0.2           # Grosor de líneas
 })
 
-# Gráfico de magnitudes con plotly
+# ----------------------------
+# Gráfico de series temporales de magnitud
+# ----------------------------
 st.subheader("Magnitud de los sismos en la escala Richter")
 if mostrar_mensaje_estado(sismos_filtro, "magnitud"):
-    # Ordenar datos por fecha
+    # Ordenar datos cronológicamente
     sismos_ordenados = sismos_filtro.sort_values('fecha')
-    
-    # Crear figura con plotly
+
+    # Crear gráfico interactivo con Plotly
     fig = px.line(
         sismos_ordenados,
-        x=range(len(sismos_ordenados)),
-        y='magnitud',
-        #title='Magnitud de los sismos en la escala Richter',
+        x=range(len(sismos_ordenados)),  # Eje X: índice de eventos
+        y='magnitud',                    # Eje Y: magnitud
         labels={'x': 'Total de sismos', 'y': 'Magnitud'},
-        template='plotly_dark'
+        template='plotly_dark'           # Usar tema oscuro de Plotly
     )
-    
-    # Configurar estilo de la línea
+
+    # Personalizar apariencia de la línea
     fig.update_traces(
         line=dict(color='green', width=0.8),
-        mode='lines+markers',
-        marker=dict(size=2)
+        mode='lines+markers',            # Línea con marcadores
+        marker=dict(size=2)              # Tamaño de marcadores
     )
-    
-    # Agregar línea de media
+
+    # Calcular y agregar línea de media
     media_magnitud = sismos_ordenados['magnitud'].mean()
     fig.add_hline(
         y=media_magnitud,
-        line_dash="dash",
+        line_dash="dash",                # Línea discontinua
         line_color="white",
         line_width=0.5,
-        annotation_text=f'Media: {media_magnitud:.2f}',
-        annotation_position="top right"
+        annotation_text=f'Media: {media_magnitud:.2f}',  # Texto anotación
+        annotation_position="top right"   # Posición de la anotación
     )
-    
-    # Configurar tooltips
+
+    # Personalizar tooltips
     fig.update_traces(
         hovertemplate='<b>Magnitud: %{y:.2f}</b><br>'
     )
-    
-    # Mostrar gráfico
+
+    # Mostrar gráfico en la aplicación
     st.plotly_chart(fig, use_container_width=True)
 
-# Gráfico de profundidades con plotly
+# ----------------------------
+# Gráfico de series temporales de profundidad
+# ----------------------------
 st.subheader("Profundidad de los sismos en Km")
 if mostrar_mensaje_estado(sismos_filtro, "profundidad"):
-    # Ordenar datos por fecha
+    # Ordenar datos cronológicamente
     sismos_ordenados = sismos_filtro.sort_values('fecha')
-    
-    # Crear figura con plotly
+
+    # Crear gráfico interactivo con Plotly
     fig = px.line(
         sismos_ordenados,
         x=range(len(sismos_ordenados)),
         y='profundidad',
-        #title='Profundidad de los sismos en Km',
         labels={'x': 'Total de sismos', 'y': 'Profundidad (km)'}
     )
-    
-    # Configurar estilo de la línea
+
+    # Personalizar apariencia
     fig.update_traces(
         line=dict(color='green', width=1),
         mode='lines+markers',
         marker=dict(size=2)
     )
-    
-    # Agregar línea de media
+
+    # Calcular y agregar línea de media
     media_profundidad = sismos_ordenados['profundidad'].mean()
     fig.add_hline(
         y=media_profundidad,
         line_dash="dash",
         line_color="white",
-        line_width=0.2,  # Ajustar el grosor de la línea de media
+        line_width=0.2,
         annotation_text=f'Media: {media_profundidad:.2f}',
         annotation_position="top right"
     )
-    
-    # Configurar tooltips
+
+    # Personalizar tooltips
     fig.update_traces(
         hovertemplate='<b>Profundidad: %{y:.2f} km</b><br>'
     )
-    
+
     # Mostrar gráfico
     st.plotly_chart(fig, use_container_width=True)
 
-# Gráfico de dispersión
+# ----------------------------
+# Gráfico de dispersión: Magnitud vs Profundidad
+# ----------------------------
 st.header("Magnitud vs Profundidad")
 if mostrar_mensaje_estado(sismos_filtro, "relación magnitud-profundidad"):
     fig = px.scatter(
         sismos_filtro,
-        x='profundidad',
-        y='magnitud',
-        color='fecha',
-        hover_data=['fecha', 'hora'],
-        #title='Magnitud vs Profundidad'
+        x='profundidad',    # Eje X: profundidad
+        y='magnitud',       # Eje Y: magnitud
+        color='fecha',      # Color por fecha (escala temporal)
+        hover_data=['fecha', 'hora'],  # Datos adicionales en tooltip
     )
+    # Mostrar gráfico interactivo
     st.plotly_chart(fig, use_container_width=True)
