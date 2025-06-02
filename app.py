@@ -6,8 +6,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 import numpy as np
+import mplcursors
 from supabase import create_client
 from datetime import datetime
+
 
 # Configuración de la página
 st.set_page_config(
@@ -281,76 +283,91 @@ plt.rcParams.update({
     'lines.linewidth': 0.2
 })
 
-# Gráfico de magnitudes
+# Gráfico de magnitudes con plotly
 st.subheader("Magnitud de los sismos en la escala Richter")
 if mostrar_mensaje_estado(sismos_filtro, "magnitud"):
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
     # Ordenar datos por fecha
     sismos_ordenados = sismos_filtro.sort_values('fecha')
     
-    # Graficar la línea de magnitudes
-    ax.plot(range(len(sismos_ordenados)), sismos_ordenados['magnitud'], 
-           linewidth=0.2, color='green', label='Magnitud')
+    # Crear figura con plotly
+    fig = px.line(
+        sismos_ordenados,
+        x=range(len(sismos_ordenados)),
+        y='magnitud',
+        #title='Magnitud de los sismos en la escala Richter',
+        labels={'x': 'Total de sismos', 'y': 'Magnitud'},
+        template='plotly_dark'
+    )
     
-    # Calcular y mostrar la media
+    # Configurar estilo de la línea
+    fig.update_traces(
+        line=dict(color='green', width=0.8),
+        mode='lines+markers',
+        marker=dict(size=2)
+    )
+    
+    # Agregar línea de media
     media_magnitud = sismos_ordenados['magnitud'].mean()
-    ax.axhline(media_magnitud, color='white', linestyle='--', 
-              linewidth=0.2, label=f'Media: {media_magnitud:.2f}')
+    fig.add_hline(
+        y=media_magnitud,
+        line_dash="dash",
+        line_color="white",
+        line_width=0.5,
+        annotation_text=f'Media: {media_magnitud:.2f}',
+        annotation_position="top right"
+    )
     
-    # Configurar el gráfico
-    ax.set_title('Magnitud de los sismos en la escala Richter', color='white')
-    ax.set_xlabel('Total de sismos', color='white')
-    ax.set_ylabel('Magnitud', color='white')
-    
-    # Añadir leyenda y cuadrícula
-    ax.legend()
-    ax.grid(True, linestyle='-', alpha=0.1)
-    
-    # Configurar colores de los ejes
-    ax.tick_params(colors='white')
-    for spine in ax.spines.values():
-        spine.set_edgecolor('white')
+    # Configurar tooltips
+    fig.update_traces(
+        hovertemplate='<b>Magnitud: %{y:.2f}</b><br>'
+    )
     
     # Mostrar gráfico
-    st.pyplot(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
-# Gráfico de profundidades
+# Gráfico de profundidades con plotly
 st.subheader("Profundidad de los sismos en Km")
 if mostrar_mensaje_estado(sismos_filtro, "profundidad"):
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
     # Ordenar datos por fecha
     sismos_ordenados = sismos_filtro.sort_values('fecha')
     
-    # Graficar la línea de profundidades
-    ax.plot(range(len(sismos_ordenados)), sismos_ordenados['profundidad'], 
-           linewidth=0.2, color='green', label='Profundidad')
+    # Crear figura con plotly
+    fig = px.line(
+        sismos_ordenados,
+        x=range(len(sismos_ordenados)),
+        y='profundidad',
+        #title='Profundidad de los sismos en Km',
+        labels={'x': 'Total de sismos', 'y': 'Profundidad (km)'}
+    )
     
-    # Calcular y mostrar la media
+    # Configurar estilo de la línea
+    fig.update_traces(
+        line=dict(color='green', width=1),
+        mode='lines+markers',
+        marker=dict(size=2)
+    )
+    
+    # Agregar línea de media
     media_profundidad = sismos_ordenados['profundidad'].mean()
-    ax.axhline(media_profundidad, color='white', linestyle='--', 
-              linewidth=0.2, label=f'Media: {media_profundidad:.2f}')
+    fig.add_hline(
+        y=media_profundidad,
+        line_dash="dash",
+        line_color="white",
+        line_width=0.2,  # Ajustar el grosor de la línea de media
+        annotation_text=f'Media: {media_profundidad:.2f}',
+        annotation_position="top right"
+    )
     
-    # Configurar el gráfico
-    ax.set_title('Profundidad de los sismos en Km', color='white')
-    ax.set_xlabel('Total de sismos', color='white')
-    ax.set_ylabel('Profundidad (km)', color='white')
-    
-    # Añadir leyenda y cuadrícula
-    ax.legend()
-    ax.grid(True, linestyle='-', alpha=0.1)
-    
-    # Configurar colores de los ejes
-    ax.tick_params(colors='white')
-    for spine in ax.spines.values():
-        spine.set_edgecolor('white')
+    # Configurar tooltips
+    fig.update_traces(
+        hovertemplate='<b>Profundidad: %{y:.2f} km</b><br>'
+    )
     
     # Mostrar gráfico
-    st.pyplot(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
 # Gráfico de dispersión
-st.header("Relación Magnitud-Profundidad")
+st.header("Magnitud vs Profundidad")
 if mostrar_mensaje_estado(sismos_filtro, "relación magnitud-profundidad"):
     fig = px.scatter(
         sismos_filtro,
@@ -358,6 +375,6 @@ if mostrar_mensaje_estado(sismos_filtro, "relación magnitud-profundidad"):
         y='magnitud',
         color='fecha',
         hover_data=['fecha', 'hora'],
-        title='Magnitud vs Profundidad'
+        #title='Magnitud vs Profundidad'
     )
     st.plotly_chart(fig, use_container_width=True)
