@@ -8,3 +8,4 @@ seaborn>=0.12.2
 plotly>=5.15.0
 numpy>=1.24.0
 supabase>=2.15.1
+mplcursors>=0.6
