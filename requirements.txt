@@ -9,3 +9,4 @@ plotly>=5.15.0
 numpy>=1.24.0
 supabase>=2.15.1
 mplcursors>=0.6
+scikit-learn>=1.6.0
