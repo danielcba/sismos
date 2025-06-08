@@ -349,10 +349,3 @@ with tab3:
         st.warning("No se identificaron zonas de alta densidad sísmica con los parámetros actuales.")
 
 # =============================================================================
-# BOTÓN PARA VOLVER AL INICIO
-# =============================================================================
-# Este botón aparece en la barra lateral y permite regresar a la página principal
-with st.sidebar:
-    if st.button("🏠 Volver al Inicio"):
-        # Usar la función switch_page para cambiar a app.py
-        st.switch_page("app.py")
