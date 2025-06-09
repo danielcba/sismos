@@ -174,7 +174,7 @@ with tab3:
         Cada color representa un grupo diferente de actividad sísmica.
         
         **Parámetros:**
-        - **Radio de búsqueda (km)**: Distancia máxima entre sismos para considerarlos parte del mismo grupo
+        - **Radio de búsqueda (km-fórmula de Haversine)**: Distancia máxima entre sismos para considerarlos parte del mismo grupo
         - **Mínimo de muestras**: Número mínimo de sismos cercanos para formar un grupo
     """)
     
