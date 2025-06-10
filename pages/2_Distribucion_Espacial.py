@@ -112,7 +112,7 @@ with tab2:
         En este mapa, cada círculo representa un sismo. El color indica la profundidad del sismo:
         - **🔴 Rojo**: Sismos superficiales (0-30 km)
         - **🟠 Naranja**: Sismos intermedios (30-70 km)
-        - **🟡 Amarillo**: Sismos profundos (>70 km)
+        - **🟢 Verde**: Sismos profundos (>70 km)
     """)
     
     # Crear mapa base
@@ -125,14 +125,14 @@ with tab2:
         elif profundidad < 70:
             return 'orange'
         else:
-            return 'yellow'
+            return 'green'
     
     # Añadir marcadores
     for _, row in sismos_df.iterrows():
         folium.CircleMarker(
             location=[row['latitud'], row['longitud']],
             radius=3,
-            popup=f"Prof: {row['profundidad']} km | Mag: {row['magnitud']}",
+            popup=f"Prof:{row['profundidad']}km<br>Mag:{row['magnitud']}",
             color=get_color(row['profundidad']),
             fill=True,
             fill_color=get_color(row['profundidad']),
@@ -176,12 +176,12 @@ with tab3:
         Se aplica el algoritmo DBSCAN para identificar zonas de alta densidad sísmica (clústeres).
         
         **Leyenda de colores:**
-        - **Cada color**: Representa un grupo diferente de actividad sísmica
-        - **⚫ Negro**: Sismos aislados que no pertenecen a ningún grupo
+        - **Cada color**: Representa un cluster diferente de actividad sísmica
+        - **⚫ Negro**: Sismos aislados que no pertenecen a ningún cluster
         
         **Parámetros:**
-        - **Radio de búsqueda (km)**: Distancia máxima entre sismos para considerarlos parte del mismo grupo
-        - **Mínimo de muestras**: Número mínimo de sismos cercanos para formar un grupo
+        - **Radio de búsqueda (km-fórmula de Haversine)**: Distancia máxima entre sismos para considerarlos parte del mismo cluster
+        - **Mínimo de muestras**: Número mínimo de sismos cercanos para formar un cluster
     """)
     
     # Función para calcular distancia en km entre coordenadas (Haversine)
@@ -209,12 +209,12 @@ with tab3:
     coords = sismos_df[['latitud', 'longitud']].values
     
     # Parámetros ajustables por el usuario (EN KILÓMETROS)
-    eps_km = st.slider("Radio de búsqueda (km)", 0.1, 50.0, 5.0, 0.1)
-    min_samples = st.slider("Mínimo de muestras por grupo", 1, 50, 10)
+    eps_km = st.slider("Radio de búsqueda (km)", 0.1, 50.0, 11.0, 0.1)
+    min_samples = st.slider("Mínimo de muestras por cluster", 1, 50, 4)
     
     # SOLUCIÓN AL PROBLEMA: Usar una implementación más eficiente de DBSCAN con métrica de Haversine
     if len(coords) > 0:
-        with st.spinner("Identificando grupos de sismos..."):
+        with st.spinner("Identificando clusters de sismos..."):
             # Crear matriz de distancias (solo si hay menos de 2000 puntos para evitar sobrecarga)
             if len(coords) < 2000:
                 # Calcular matriz de distancias
@@ -245,7 +245,7 @@ with tab3:
     unique_labels = set(labels)
     n_clusters = len(unique_labels) - (1 if -1 in unique_labels else 0)
     
-    # Contar sismos por grupo
+    # Contar sismos por cluster
     cluster_counts = {label: np.sum(labels == label) for label in unique_labels if label != -1}
     
     # Filtrar clusters que realmente tienen el mínimo de muestras requerido
@@ -258,8 +258,8 @@ with tab3:
     
     st.info(f"""
         **Resultados:**
-        - Grupos identificados: {n_valid_clusters}
-        - Sismos en grupos: {n_sismos_grupos}
+        - clusters identificados: {n_valid_clusters}
+        - Sismos en clusters: {n_sismos_grupos}
         - Sismos aislados (negros): {n_ruido}
     """)
     
@@ -267,7 +267,7 @@ with tab3:
     sismos_df['cluster'] = labels
     
     # Crear mapa
-    m = folium.Map(location=[-32.2935, -64.1810], zoom_start=6)
+    m = folium.Map(location=[-32.2935, -64.1810], zoom_start=7)
     
     # Paleta de colores para los clusters
     colors = [
@@ -283,12 +283,12 @@ with tab3:
         # Solo mostrar clusters válidos (que cumplen con min_samples)
         if cluster_id == -1 or cluster_id not in valid_clusters:
             color = 'black'
-            popup_text = "Sismo aislado (no pertenece a ningún grupo)"
+            popup_text = "Sismo aislado (no pertenece a ningún cluster)"
         else:
             # Usar colores cíclicos para cualquier número de clusters
             color_idx = cluster_id % len(colors)
             color = colors[color_idx]
-            popup_text = f"Grupo: {cluster_id} | Sismos: {cluster_counts[cluster_id]}"
+            popup_text = f"cluster: {cluster_id} | Sismos: {cluster_counts[cluster_id]}"
         
         folium.CircleMarker(
             location=[row['latitud'], row['longitud']],
@@ -327,11 +327,11 @@ with tab3:
         
         st.dataframe(cluster_stats.sort_values('Cantidad de Sismos', ascending=False))
         
-        # Mostrar distribución de sismos por grupo
+        # Mostrar distribución de sismos por cluster
         fig, ax = plt.subplots(figsize=(10, 6))
         clusters_validos['cluster'].value_counts().plot(kind='bar', ax=ax, color=colors)
-        ax.set_title('Distribución de Sismos por Grupo')
-        ax.set_xlabel('Grupo')
+        ax.set_title('Distribución de Sismos por Cluster')
+        ax.set_xlabel('Cluster')
         ax.set_ylabel('Número de Sismos')
         plt.xticks(rotation=45)
         plt.grid(axis='y', alpha=0.3)
