@@ -167,18 +167,24 @@ with tab2:
 # =============================================
 # Pestaña 3: Clústeres Espaciales (ACTUALIZADO PARA USAR KM)
 # =============================================
+# =============================================
+# Pestaña 3: Clústeres Espaciales (VERSIÓN MEJORADA)
+# =============================================
 with tab3:
     st.header("Identificación de Agrupamientos Sísmicos")
     st.markdown("""
         Se aplica el algoritmo DBSCAN para identificar zonas de alta densidad sísmica (clústeres).
-        Cada color representa un grupo diferente de actividad sísmica.
+        
+        **Leyenda de colores:**
+        - **Cada color**: Representa un grupo diferente de actividad sísmica
+        - **⚫ Negro**: Sismos aislados que no pertenecen a ningún grupo
         
         **Parámetros:**
-        - **Radio de búsqueda (km-fórmula de Haversine)**: Distancia máxima entre sismos para considerarlos parte del mismo grupo
+        - **Radio de búsqueda (km)**: Distancia máxima entre sismos para considerarlos parte del mismo grupo
         - **Mínimo de muestras**: Número mínimo de sismos cercanos para formar un grupo
     """)
     
-    # Función para calcular distancia en km entre coordenadas
+    # Función para calcular distancia en km entre coordenadas (Haversine)
     def haversine_distance(lat1, lon1, lat2, lon2):
         """
         Calcula la distancia en kilómetros entre dos puntos geográficos
@@ -199,47 +205,63 @@ with tab3:
         
         return R * c
 
-    # Crear matriz de distancias (en km)
-    def distance_matrix(coords):
-        """
-        Construye una matriz de distancias en kilómetros entre todos los pares de puntos
-        """
-        n = coords.shape[0]
-        dist_matrix = np.zeros((n, n))
-        
-        for i in range(n):
-            for j in range(i+1, n):
-                dist = haversine_distance(
-                    coords[i, 0], coords[i, 1],
-                    coords[j, 0], coords[j, 1]
-                )
-                dist_matrix[i, j] = dist
-                dist_matrix[j, i] = dist
-                
-        return dist_matrix
-
     # Preparamos los datos para clustering
     coords = sismos_df[['latitud', 'longitud']].values
     
     # Parámetros ajustables por el usuario (EN KILÓMETROS)
     eps_km = st.slider("Radio de búsqueda (km)", 0.1, 50.0, 5.0, 0.1)
-    min_samples = st.slider("Mínimo de muestras por clúster", 1, 50, 10)
+    min_samples = st.slider("Mínimo de muestras por grupo", 1, 50, 10)
     
-    # Calcular matriz de distancias (solo si hay datos)
+    # SOLUCIÓN AL PROBLEMA: Usar una implementación más eficiente de DBSCAN con métrica de Haversine
     if len(coords) > 0:
-        # Mostrar mensaje de carga
-        with st.spinner("Calculando distancias entre sismos..."):
-            dist_matrix = distance_matrix(coords)
-            
-            # Aplicar DBSCAN con la matriz de distancias
-            db = DBSCAN(eps=eps_km, min_samples=min_samples, metric="precomputed").fit(dist_matrix)
-            labels = db.labels_
+        with st.spinner("Identificando grupos de sismos..."):
+            # Crear matriz de distancias (solo si hay menos de 2000 puntos para evitar sobrecarga)
+            if len(coords) < 2000:
+                # Calcular matriz de distancias
+                dist_matrix = np.zeros((len(coords), len(coords)))
+                for i in range(len(coords)):
+                    for j in range(i+1, len(coords)):
+                        dist = haversine_distance(
+                            coords[i, 0], coords[i, 1],
+                            coords[j, 0], coords[j, 1]
+                        )
+                        dist_matrix[i, j] = dist
+                        dist_matrix[j, i] = dist
+                
+                # Aplicar DBSCAN con la matriz de distancias
+                db = DBSCAN(eps=eps_km, min_samples=min_samples, metric="precomputed").fit(dist_matrix)
+                labels = db.labels_
+            else:
+                # Para grandes conjuntos de datos, usar una aproximación más eficiente
+                # Convertir a radianes para usar la métrica de Haversine directamente
+                coords_rad = np.radians(coords)
+                db = DBSCAN(eps=eps_km/6371, min_samples=min_samples, 
+                            metric='haversine', algorithm='ball_tree').fit(coords_rad)
+                labels = db.labels_
     else:
         labels = np.array([])
     
     # Número de clusters encontrados (excluyendo ruido)
-    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
-    st.info(f"Se identificaron {n_clusters} zonas de alta actividad sísmica.")
+    unique_labels = set(labels)
+    n_clusters = len(unique_labels) - (1 if -1 in unique_labels else 0)
+    
+    # Contar sismos por grupo
+    cluster_counts = {label: np.sum(labels == label) for label in unique_labels if label != -1}
+    
+    # Filtrar clusters que realmente tienen el mínimo de muestras requerido
+    valid_clusters = [label for label, count in cluster_counts.items() if count >= min_samples]
+    n_valid_clusters = len(valid_clusters)
+    
+    # Información estadística
+    n_ruido = np.sum(labels == -1)
+    n_sismos_grupos = len(labels) - n_ruido
+    
+    st.info(f"""
+        **Resultados:**
+        - Grupos identificados: {n_valid_clusters}
+        - Sismos en grupos: {n_sismos_grupos}
+        - Sismos aislados (negros): {n_ruido}
+    """)
     
     # Añadir etiquetas al DataFrame
     sismos_df['cluster'] = labels
@@ -250,25 +272,33 @@ with tab3:
     # Paleta de colores para los clusters
     colors = [
         'red', 'blue', 'green', 'purple', 'orange', 
-        'darkred', 'lightblue', 'pink', 'darkblue', 'gray'
+        'darkred', 'darkblue', 'darkgreen', 'magenta', 'cyan',
+        'lime', 'teal', 'navy', 'maroon', 'olive'
     ]
     
     # Añadir marcadores por cluster
     for _, row in sismos_df.iterrows():
         cluster_id = row['cluster']
-        if cluster_id == -1:
-            color = 'black'  # Ruido
+        
+        # Solo mostrar clusters válidos (que cumplen con min_samples)
+        if cluster_id == -1 or cluster_id not in valid_clusters:
+            color = 'black'
+            popup_text = "Sismo aislado (no pertenece a ningún grupo)"
         else:
-            color = colors[cluster_id % len(colors)]
+            # Usar colores cíclicos para cualquier número de clusters
+            color_idx = cluster_id % len(colors)
+            color = colors[color_idx]
+            popup_text = f"Grupo: {cluster_id} | Sismos: {cluster_counts[cluster_id]}"
         
         folium.CircleMarker(
             location=[row['latitud'], row['longitud']],
-            radius=3,
-            popup=f"Cluster: {cluster_id} | Mag: {row['magnitud']}",
+            radius=5,  # Aumentar tamaño para mejor visibilidad
+            popup=f"{popup_text} | Mag: {row['magnitud']} | Prof: {row['profundidad']} km",
             color=color,
             fill=True,
             fill_color=color,
-            fill_opacity=0.7
+            fill_opacity=0.7,
+            weight=1
         ).add_to(m)
     
     # Mostrar mapa
@@ -276,8 +306,11 @@ with tab3:
     
     # Estadísticas de clusters
     st.subheader("Características de los Agrupamientos")
-    if n_clusters > 0:
-        cluster_stats = sismos_df[sismos_df['cluster'] != -1].groupby('cluster').agg({
+    if n_valid_clusters > 0:
+        # Filtrar solo clusters válidos
+        clusters_validos = sismos_df[sismos_df['cluster'].isin(valid_clusters)]
+        
+        cluster_stats = clusters_validos.groupby('cluster').agg({
             'latitud': 'mean',
             'longitud': 'mean',
             'magnitud': ['mean', 'max'],
@@ -293,5 +326,16 @@ with tab3:
         ]
         
         st.dataframe(cluster_stats.sort_values('Cantidad de Sismos', ascending=False))
+        
+        # Mostrar distribución de sismos por grupo
+        fig, ax = plt.subplots(figsize=(10, 6))
+        clusters_validos['cluster'].value_counts().plot(kind='bar', ax=ax, color=colors)
+        ax.set_title('Distribución de Sismos por Grupo')
+        ax.set_xlabel('Grupo')
+        ax.set_ylabel('Número de Sismos')
+        plt.xticks(rotation=45)
+        plt.grid(axis='y', alpha=0.3)
+        st.pyplot(fig)
+        
     else:
         st.warning("No se identificaron zonas de alta densidad sísmica con los parámetros actuales.")
