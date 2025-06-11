@@ -444,11 +444,6 @@ with tab4:
     st.markdown("""
         Este mapa muestra los sismos que han ocurrido en las mismas coordenadas geográficas.
         Cada grupo de sismos en la misma ubicación está conectado visualmente.
-        
-        **Información en los popups:**
-        - Fecha y hora de cada sismo
-        - Magnitud y profundidad
-        - Número de sismos en esa ubicación
     """)
     
     # Obtener datos de sismos en las mismas coordenadas
@@ -457,9 +452,6 @@ with tab4:
     if sismos_mismas_coords.empty:
         st.warning("No se encontraron sismos en las mismas coordenadas.")
     else:
-        # Contar cuántos sismos hay por ubicación
-        coord_counts = sismos_mismas_coords.groupby(['latitud', 'longitud']).size().reset_index(name='conteo')
-        
         # Crear mapa centrado en Córdoba
         m = folium.Map(location=[-32.2935, -64.1810], zoom_start=7)
         
@@ -468,75 +460,91 @@ with tab4:
             # Usar una combinación de lat y lon para generar un color único
             return f'#{hash(f"{lat}_{lon}") % 0xFFFFFF:06x}'
         
-        # Agrupar por coordenadas
-        for (lat, lon), group in sismos_mismas_coords.groupby(['latitud', 'longitud']):
+        # Redondear coordenadas para agrupar ubicaciones cercanas
+        sismos_mismas_coords['lat_rounded'] = sismos_mismas_coords['latitud'].round(4)
+        sismos_mismas_coords['lon_rounded'] = sismos_mismas_coords['longitud'].round(4)
+        
+        # Agrupar por coordenadas redondeadas
+        grouped = sismos_mismas_coords.groupby(['lat_rounded', 'lon_rounded'])
+        
+        for (lat, lon), group in grouped:
             count = len(group)
+            if count < 2:  # Solo mostrar ubicaciones con al menos 2 sismos
+                continue
+                
             location_color = get_location_color(lat, lon)
             
             # Ordenar por fecha y hora
             group = group.sort_values(by=['fecha', 'hora'])
             
             # Crear contenido del popup para esta ubicación
-            popup_content = f"""
-                <div style='max-width: 300px; max-height: 300px; overflow-y: auto;'>
-                    <h4>Sismos en esta ubicación</h4>
-                    <p>Coordenadas: {lat:.3f}, {lon:.3f}</p>
-                    <p>Total de sismos: {count}</p>
-                    <hr>
+            popup_content = """
+            <div style='max-width: 300px; max-height: 400px; overflow-y: auto;'>
+                <div style='padding: 10px; background-color: #f8f9fa; border-radius: 5px;'>
+                    <h4 style='margin: 0 0 10px 0; color: #2c3e50;'>Sismos en esta ubicación</h4>
+                    <p style='margin: 5px 0;'><strong>Coordenadas:</strong> {lat:.4f}°, {lon:.4f}°</p>
+                    <p style='margin: 5px 0;'><strong>Total de sismos:</strong> {count}</p>
+                    <hr style='margin: 10px 0;'>
                     <div style='margin-top: 10px;'>
-            """
+            """.format(lat=lat, lon=lon, count=count)
             
-            # Agregar detalles de cada sismo
+            # Agregar cada sismo al popup
             for _, sismo in group.iterrows():
-                popup_content += f"""
-                    <div style='margin-bottom: 10px; padding: 5px; border-left: 3px solid {location_color}; padding-left: 8px;'>
-                        <strong>Fecha:</strong> {sismo['fecha'].strftime('%Y-%m-%d')}<br>
-                        <strong>Hora:</strong> {sismo['hora']}<br>
-                        <strong>Magnitud:</strong> {sismo['magnitud']}<br>
-                        <strong>Profundidad:</strong> {sismo['profundidad']} km
+                # Asegurar que la fecha y hora sean cadenas
+                fecha_str = str(sismo['fecha']).split()[0] if pd.notnull(sismo['fecha']) else 'N/A'
+                hora_str = str(sismo['hora']).split()[-1] if pd.notnull(sismo['hora']) else 'N/A'
+                
+                # Usar un color de borde consistente para todos los sismos de esta ubicación
+                border_color = location_color.lstrip('#')
+                border_style = f'4px solid #{border_color}'
+                
+                # Crear el contenido del sismo usando solo .format() para evitar problemas
+                sismo_html = """
+                    <div style='margin-bottom: 12px; padding: 8px; background-color: #ffffff; 
+                                border-left: 4px solid {color}; 
+                                border-radius: 0 4px 4px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'>
+                        <div style='font-weight: bold; color: #2c3e50; margin-bottom: 4px;'>
+                            {fecha} a las {hora}
+                        </div>
+                        <div style='display: flex; justify-content: space-between;'>
+                            <span><strong>Magnitud:</strong> {mag:.1f}</span>
+                            <span><strong>Profundidad:</strong> {prof} km</span>
+                        </div>
                     </div>
-                """
+                """.format(
+                    color=location_color,
+                    fecha=fecha_str,
+                    hora=hora_str,
+                    mag=sismo['magnitud'],
+                    prof=sismo['profundidad']
+                )
+                popup_content += sismo_html
             
             popup_content += """
                     </div>
                 </div>
+            </div>
             """
             
-            # Agregar marcador para esta ubicación
-            folium.CircleMarker(
-                location=[lat, lon],
-                radius=5 + count * 0.5,  # Radio basado en la cantidad de sismos
-                popup=folium.Popup(popup_content, max_width=350),
-                color=location_color,
-                fill=True,
-                fill_color=location_color,
-                fill_opacity=0.3,
-                weight=1
-            ).add_to(m)
+            # Obtener la magnitud máxima del grupo
+            magnitud_maxima = group['magnitud'].max()
             
-            # Agregar etiqueta con el conteo
-            folium.Marker(
+            # Calcular radio basado en la magnitud (misma fórmula que en otras pestañas)
+            radio = 2 + magnitud_maxima * 1.2
+            
+            # Crear marcador con popup que solo se activa al hacer clic
+            marker = folium.CircleMarker(
                 location=[lat, lon],
-                icon=folium.DivIcon(
-                    html=f"""
-                        <div style="
-                            background: rgba(0,0,0,0.7);
-                            border: 1px solid white;
-                            border-radius: 50%;
-                            width: 24px;
-                            height: 24px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            color: white;
-                            font-weight: bold;
-                        ">
-                            {count}
-                        </div>
-                    """
-                ),
-                tooltip=f"{count} sismos en esta ubicación"
-            ).add_to(m)
+                radius=radio,  # Radio proporcional a la magnitud
+                popup=folium.Popup(popup_content, max_width=350),
+                color=location_color,  # Color único por ubicación
+                fill=True,
+                fill_color=location_color,  # Mismo color para el relleno
+                fill_opacity=1,  # 30% de opacidad para el relleno
+                weight=0.5,  # Borde más fino para mejor apariencia
+                tooltip=None  # Sin tooltip al pasar el mouse
+            )
+            marker.add_to(m)
         
         # Mostrar el mapa
         folium_static(m, width=1000, height=600)
