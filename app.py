@@ -208,7 +208,7 @@ st.sidebar.subheader("Filtro de Proximidad")
 
 # Input para latitud con precisión de 3 decimales
 latitud = st.sidebar.number_input(
-    "Latitud en formato decimal ej. -31.351",
+    "Latitud en Grados Decimales (DD) ej. -31.351",
     min_value=-90.0,    # Rango válido de latitudes
     max_value=90.0,
     value=None,         # Sin valor predeterminado
@@ -218,7 +218,7 @@ latitud = st.sidebar.number_input(
 
 # Input para longitud con precisión de 3 decimales
 longitud = st.sidebar.number_input(
-    "Longitud en formato decimal ej. -64.619",
+    "Longitud en Grados Decimales (DD) ej. -64.619",
     min_value=-180.0,   # Rango válido de longitudes
     max_value=180.0,
     value=None,
@@ -361,6 +361,25 @@ if mostrar_mensaje_estado(sismos_filtro, "proximidad"):
             fill_color='red',    # Color de relleno
             fill_opacity=0.3,    # Transparencia del relleno
             weight=0.5           # Grosor del borde
+        ).add_to(m)
+    
+    # Si se está aplicando un filtro de proximidad, agregar un círculo con el radio de búsqueda
+    if 'proximidad' in filtros_aplicados and latitud is not None and longitud is not None and radio > 0:
+        # Agregar marcador en el centro
+        folium.Marker(
+            location=[latitud, longitud],
+            popup=f"Centro de búsqueda\nRadio: {radio} km",
+            icon=folium.Icon(color='blue', icon='info-sign')
+        ).add_to(m)
+        
+        # Agregar círculo con el radio de búsqueda
+        folium.Circle(
+            location=[latitud, longitud],
+            radius=radio * 1000,  # Convertir km a metros
+            color='blue',
+            weight=1,  # Línea muy fina
+            fill=False,
+            opacity=0.7
         ).add_to(m)
     
     # Mostrar el mapa en la aplicación
