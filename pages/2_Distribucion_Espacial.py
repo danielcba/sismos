@@ -174,10 +174,7 @@ with tab2:
     st.pyplot(fig)
 
 # =============================================
-# Pestaña 3: Clústeres Espaciales (ACTUALIZADO PARA USAR KM)
-# =============================================
-# =============================================
-# Pestaña 3: Clústeres Espaciales (VERSIÓN MEJORADA)
+# Pestaña 3: Clústeres Espaciales
 # =============================================
 with tab3:
     st.header("Identificación de Agrupamientos Sísmicos")
