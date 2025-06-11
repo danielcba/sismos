@@ -208,7 +208,7 @@ st.sidebar.subheader("Filtro de Proximidad")
 
 # Input para latitud con precisión de 3 decimales
 latitud = st.sidebar.number_input(
-    "Latitud",
+    "Latitud en formato decimal ej. -31.351",
     min_value=-90.0,    # Rango válido de latitudes
     max_value=90.0,
     value=None,         # Sin valor predeterminado
@@ -218,7 +218,7 @@ latitud = st.sidebar.number_input(
 
 # Input para longitud con precisión de 3 decimales
 longitud = st.sidebar.number_input(
-    "Longitud",
+    "Longitud en formato decimal ej. -64.619",
     min_value=-180.0,   # Rango válido de longitudes
     max_value=180.0,
     value=None,
@@ -228,7 +228,7 @@ longitud = st.sidebar.number_input(
 
 # Radio de búsqueda en kilómetros
 radio = st.sidebar.number_input(
-    "Radio de búsqueda (km)",
+    "Radio de búsqueda en km",
     min_value=0.0,      # Radio mínimo (0 = mismo punto)
     max_value=1000.0,   # Radio máximo permitido
     value=0.0,          # Valor predeterminado (desactivado)
