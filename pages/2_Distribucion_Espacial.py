@@ -92,7 +92,7 @@ with tab1:
     """)
     
     # Crear mapa base
-    m = folium.Map(location=[-32.2935, -64.1810], zoom_start=6)
+    m = folium.Map(location=[-32.2935, -64.1810], zoom_start=7)
     
     # Preparar datos para el mapa de calor
     heat_data = [[row['latitud'], row['longitud']] for _, row in sismos_df.iterrows()]
@@ -116,7 +116,7 @@ with tab2:
     """)
     
     # Crear mapa base
-    m = folium.Map(location=[-32.2935, -64.1810], zoom_start=6)
+    m = folium.Map(location=[-32.2935, -64.1810], zoom_start=7)
     
     # Función para determinar color según profundidad
     def get_color(profundidad):
