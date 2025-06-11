@@ -341,7 +341,7 @@ if mostrar_mensaje_estado(sismos_filtro, "fecha"):
 st.header("Ubicación de los Sismos")
 if mostrar_mensaje_estado(sismos_filtro, "proximidad"):
     # Crear mapa centrado en Córdoba, Argentina
-    m = folium.Map(location=[-32.2935000, -64.1810500], zoom_start=6)
+    m = folium.Map(location=[-32.2935000, -64.1810500], zoom_start=7)
     
     # Añadir marcadores circulares para cada sismo
     for _, sismo in sismos_filtro.iterrows():
@@ -383,7 +383,7 @@ if mostrar_mensaje_estado(sismos_filtro, "proximidad"):
         ).add_to(m)
     
     # Mostrar el mapa en la aplicación
-    folium_static(m)
+    folium_static(m, width=1000, height=600)
 
 # =============================================
 # SECCIÓN DE GRÁFICOS ANALÍTICOS
