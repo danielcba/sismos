@@ -70,16 +70,61 @@ def fetch_sismos_data():
 # Cargar datos
 sismos_df = fetch_sismos_data()
 
+def fetch_sismos_mismas_coordenadas():
+    """Obtiene los sismos que ocurrieron en las mismas coordenadas."""
+    try:
+        # Obtener todos los datos y procesar localmente
+        st.info("Obteniendo y procesando datos de sismos...")
+        df = fetch_sismos_data()
+        
+        if not df.empty:
+            # Redondear coordenadas a 4 decimales para agrupar ubicaciones cercanas
+            df['lat_rounded'] = df['latitud'].round(4)
+            df['lon_rounded'] = df['longitud'].round(4)
+            
+            # Contar sismos por ubicación redondeada
+            coord_counts = df.groupby(['lat_rounded', 'lon_rounded']).size().reset_index(name='count')
+            
+            # Filtrar solo ubicaciones con más de un sismo
+            duplicated_coords = coord_counts[coord_counts['count'] > 1][['lat_rounded', 'lon_rounded']]
+            
+            if not duplicated_coords.empty:
+                # Unir con los datos originales para obtener todos los campos
+                result = pd.merge(
+                    df, 
+                    duplicated_coords, 
+                    left_on=['lat_rounded', 'lon_rounded'],
+                    right_on=['lat_rounded', 'lon_rounded']
+                )
+                
+                # Ordenar por ubicación, fecha y hora
+                result = result.sort_values(by=['lat_rounded', 'lon_rounded', 'fecha', 'hora'])
+                
+                # Eliminar columnas temporales
+                result = result.drop(columns=['lat_rounded', 'lon_rounded'])
+                
+                return result
+            
+        st.warning("No se encontraron ubicaciones con múltiples sismos.")
+        return pd.DataFrame()
+        
+    except Exception as e:
+        st.error(f"Error al procesar sismos en las mismas coordenadas: {str(e)}")
+        import traceback
+        st.error(traceback.format_exc())
+        return pd.DataFrame()
+
 # Mostrar mensaje si no hay datos
 if sismos_df.empty:
     st.warning("No se encontraron datos de sismos.")
     st.stop()
 
 # Crear pestañas para los diferentes análisis
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "Mapa de Calor Geográfico", 
     "Profundidad vs. Ubicación", 
-    "Clústeres Espaciales"
+    "Clústeres Espaciales",
+    "Sismos en Mismas Coordenadas"
 ])
 
 # =============================================
@@ -176,6 +221,7 @@ with tab2:
 # =============================================
 # Pestaña 3: Clústeres Espaciales
 # =============================================
+
 with tab3:
     st.header("Identificación de Agrupamientos Sísmicos")
     st.markdown("""
@@ -388,3 +434,155 @@ with tab3:
         
     else:
         st.warning("No se identificaron zonas de alta densidad sísmica con los parámetros actuales.")
+
+# =============================================
+# Pestaña 4: Sismos en Mismas Coordenadas
+# =============================================
+
+with tab4:
+    st.header("Sismos en las Mismas Coordenadas")
+    st.markdown("""
+        Este mapa muestra los sismos que han ocurrido en las mismas coordenadas geográficas.
+        Cada grupo de sismos en la misma ubicación está conectado visualmente.
+        
+        **Información en los popups:**
+        - Fecha y hora de cada sismo
+        - Magnitud y profundidad
+        - Número de sismos en esa ubicación
+    """)
+    
+    # Obtener datos de sismos en las mismas coordenadas
+    sismos_mismas_coords = fetch_sismos_mismas_coordenadas()
+    
+    if sismos_mismas_coords.empty:
+        st.warning("No se encontraron sismos en las mismas coordenadas.")
+    else:
+        # Contar cuántos sismos hay por ubicación
+        coord_counts = sismos_mismas_coords.groupby(['latitud', 'longitud']).size().reset_index(name='conteo')
+        
+        # Crear mapa centrado en Córdoba
+        m = folium.Map(location=[-32.2935, -64.1810], zoom_start=7)
+        
+        # Función para obtener un color único por ubicación
+        def get_location_color(lat, lon):
+            # Usar una combinación de lat y lon para generar un color único
+            return f'#{hash(f"{lat}_{lon}") % 0xFFFFFF:06x}'
+        
+        # Agrupar por coordenadas
+        for (lat, lon), group in sismos_mismas_coords.groupby(['latitud', 'longitud']):
+            count = len(group)
+            location_color = get_location_color(lat, lon)
+            
+            # Ordenar por fecha y hora
+            group = group.sort_values(by=['fecha', 'hora'])
+            
+            # Crear contenido del popup para esta ubicación
+            popup_content = f"""
+                <div style='max-width: 300px; max-height: 300px; overflow-y: auto;'>
+                    <h4>Sismos en esta ubicación</h4>
+                    <p>Coordenadas: {lat:.3f}, {lon:.3f}</p>
+                    <p>Total de sismos: {count}</p>
+                    <hr>
+                    <div style='margin-top: 10px;'>
+            """
+            
+            # Agregar detalles de cada sismo
+            for _, sismo in group.iterrows():
+                popup_content += f"""
+                    <div style='margin-bottom: 10px; padding: 5px; border-left: 3px solid {location_color}; padding-left: 8px;'>
+                        <strong>Fecha:</strong> {sismo['fecha'].strftime('%Y-%m-%d')}<br>
+                        <strong>Hora:</strong> {sismo['hora']}<br>
+                        <strong>Magnitud:</strong> {sismo['magnitud']}<br>
+                        <strong>Profundidad:</strong> {sismo['profundidad']} km
+                    </div>
+                """
+            
+            popup_content += """
+                    </div>
+                </div>
+            """
+            
+            # Agregar marcador para esta ubicación
+            folium.CircleMarker(
+                location=[lat, lon],
+                radius=5 + count * 0.5,  # Radio basado en la cantidad de sismos
+                popup=folium.Popup(popup_content, max_width=350),
+                color=location_color,
+                fill=True,
+                fill_color=location_color,
+                fill_opacity=0.3,
+                weight=1
+            ).add_to(m)
+            
+            # Agregar etiqueta con el conteo
+            folium.Marker(
+                location=[lat, lon],
+                icon=folium.DivIcon(
+                    html=f"""
+                        <div style="
+                            background: rgba(0,0,0,0.7);
+                            border: 1px solid white;
+                            border-radius: 50%;
+                            width: 24px;
+                            height: 24px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-weight: bold;
+                        ">
+                            {count}
+                        </div>
+                    """
+                ),
+                tooltip=f"{count} sismos en esta ubicación"
+            ).add_to(m)
+        
+        # Mostrar el mapa
+        folium_static(m, width=1000, height=600)
+        
+        # Mostrar tabla con los datos
+        with st.expander("Ver datos detallados", expanded=False):
+            st.subheader("Datos de sismos en las mismas coordenadas")
+            
+            # Crear una versión resumida para la tabla
+            resumen = sismos_mismas_coords.groupby(
+                ['latitud', 'longitud']
+            ).agg({
+                'fecha': ['count', 'min', 'max'],
+                'magnitud': ['min', 'max', 'mean'],
+                'profundidad': ['min', 'max', 'mean']
+            }).reset_index()
+            
+            # Aplanar el MultiIndex de columnas
+            resumen.columns = ['_'.join(col).strip('_') for col in resumen.columns.values]
+            
+            # Renombrar columnas para mejor legibilidad
+            resumen = resumen.rename(columns={
+                'latitud_': 'Latitud',
+                'longitud_': 'Longitud',
+                'fecha_count': 'Total Sismos',
+                'fecha_min': 'Primera Fecha',
+                'fecha_max': 'Última Fecha',
+                'magnitud_min': 'Mín. Magnitud',
+                'magnitud_max': 'Máx. Magnitud',
+                'magnitud_mean': 'Prom. Magnitud',
+                'profundidad_min': 'Mín. Prof. (km)',
+                'profundidad_max': 'Máx. Prof. (km)',
+                'profundidad_mean': 'Prom. Prof. (km)'
+            })
+            
+            # Formatear fechas
+            resumen['Primera Fecha'] = pd.to_datetime(resumen['Primera Fecha']).dt.strftime('%Y-%m-%d')
+            resumen['Última Fecha'] = pd.to_datetime(resumen['Última Fecha']).dt.strftime('%Y-%m-%d')
+            
+            # Mostrar tabla
+            st.dataframe(
+                resumen.sort_values('Total Sismos', ascending=False),
+                column_config={
+                    'Latitud': st.column_config.NumberColumn(format='%.4f'),
+                    'Longitud': st.column_config.NumberColumn(format='%.4f'),
+                    'Prom. Magnitud': st.column_config.NumberColumn(format='%.2f'),
+                    'Prom. Prof. (km)': st.column_config.NumberColumn(format='%.1f')
+                }
+            )
