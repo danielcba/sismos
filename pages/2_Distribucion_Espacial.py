@@ -13,6 +13,7 @@ import seaborn as sns
 from supabase import create_client
 from datetime import datetime
 import math  # Para cálculos geográficos
+import plotly.graph_objects as go  # Para gráficos interactivos
 
 # Configuración de la página
 st.set_page_config(
@@ -127,16 +128,24 @@ with tab2:
         else:
             return 'green'
     
-    # Añadir marcadores
+    # Añadir marcadores circulares para cada sismo
     for _, row in sismos_df.iterrows():
         folium.CircleMarker(
             location=[row['latitud'], row['longitud']],
-            radius=3,
-            popup=f"Prof:{row['profundidad']}km<br>Mag:{row['magnitud']}",
-            color=get_color(row['profundidad']),
-            fill=True,
-            fill_color=get_color(row['profundidad']),
-            fill_opacity=0.7
+            # Radio proporcional a la magnitud
+            radius=2 + row['magnitud'] * 1.2,
+            # Popup con información detallada
+            popup=f"""
+                Fecha: {row['fecha'].strftime('%Y-%m-%d')}<br>
+                Hora: {row['hora']}<br>
+                Magnitud: {row['magnitud']}<br>
+                Profundidad: {row['profundidad']} km
+            """,
+            color=get_color(row['profundidad']),  # Color del borde según profundidad
+            fill=True,                            # Rellenar el círculo
+            fill_color=get_color(row['profundidad']),  # Color de relleno según profundidad
+            fill_opacity=0.3,                     # Transparencia del relleno
+            weight=0.5                            # Grosor del borde
         ).add_to(m)
     
     # Mostrar mapa
@@ -283,22 +292,29 @@ with tab3:
         # Solo mostrar clusters válidos (que cumplen con min_samples)
         if cluster_id == -1 or cluster_id not in valid_clusters:
             color = 'black'
-            popup_text = "Sismo aislado (no pertenece a ningún cluster)"
+            popup_text = "Sismo aislado"
         else:
             # Usar colores cíclicos para cualquier número de clusters
             color_idx = cluster_id % len(colors)
             color = colors[color_idx]
-            popup_text = f"cluster: {cluster_id} | Sismos: {cluster_counts[cluster_id]}"
+            popup_text = f"cluster:{cluster_id}<br>Sismos:{cluster_counts[cluster_id]}"
         
         folium.CircleMarker(
             location=[row['latitud'], row['longitud']],
-            radius=5,  # Aumentar tamaño para mejor visibilidad
-            popup=f"{popup_text} | Mag: {row['magnitud']} | Prof: {row['profundidad']} km",
+            # Radio proporcional a la magnitud (igual que en la página principal)
+            radius=2 + row['magnitud'] * 1.2,
+            popup=f"""
+                {popup_text}<br>
+                Fecha:{row['fecha'].strftime('%Y-%m-%d')}<br>
+                Hora:{row['hora']}<br>
+                Magnitud:{row['magnitud']}<br>
+                Profundidad:{row['profundidad']}km
+            """,
             color=color,
             fill=True,
             fill_color=color,
-            fill_opacity=0.7,
-            weight=1
+            fill_opacity=0.3,  # Misma opacidad que en la página principal
+            weight=0.5  # Mismo grosor de borde que en la página principal
         ).add_to(m)
     
     # Mostrar mapa
@@ -327,15 +343,51 @@ with tab3:
         
         st.dataframe(cluster_stats.sort_values('Cantidad de Sismos', ascending=False))
         
-        # Mostrar distribución de sismos por cluster
-        fig, ax = plt.subplots(figsize=(10, 6))
-        clusters_validos['cluster'].value_counts().plot(kind='bar', ax=ax, color=colors)
-        ax.set_title('Distribución de Sismos por Cluster')
-        ax.set_xlabel('Cluster')
-        ax.set_ylabel('Número de Sismos')
-        plt.xticks(rotation=45)
-        plt.grid(axis='y', alpha=0.3)
-        st.pyplot(fig)
+        # Mostrar distribución de sismos por cluster con estilo mejorado
+        cluster_counts = clusters_validos['cluster'].value_counts().sort_index()
+        
+        fig = go.Figure()
+        
+        # Agregar barras con colores según el cluster
+        for i, (cluster_id, count) in enumerate(cluster_counts.items()):
+            color_idx = cluster_id % len(colors)
+            color = colors[color_idx]
+            
+            fig.add_trace(go.Bar(
+                x=[f'Cluster {int(cluster_id)}'],
+                y=[count],
+                name=f'Cluster {int(cluster_id)}',
+                marker_color=color,
+                marker_line=dict(color='white', width=1),
+                hovertemplate='<b>%{x}</b><br>Sismos: %{y}<extra></extra>',
+                showlegend=False
+            ))
+        
+        # Calcular y agregar línea de promedio
+        promedio = cluster_counts.mean()
+        fig.add_hline(
+            y=promedio,
+            line_dash="dash",
+            line_color='green',
+            line_width=1,
+            annotation_text=f'Promedio: {promedio:.1f} sismos/cluster',
+            annotation_position="top right"
+        )
+        
+        # Personalizar layout
+        fig.update_layout(
+            title='Distribución de Sismos por Cluster',
+            xaxis=dict(title='Cluster'),
+            yaxis=dict(title='Número de Sismos'),
+            template='plotly_dark',
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white'),
+            hovermode='x unified',
+            showlegend=False
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
         
     else:
         st.warning("No se identificaron zonas de alta densidad sísmica con los parámetros actuales.")
