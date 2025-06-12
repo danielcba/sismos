@@ -124,7 +124,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "Mapa de Calor Geográfico", 
     "Profundidad vs. Ubicación", 
     "Clústeres Espaciales",
-    "Sismos en Mismas Coordenadas"
+    "Sismos en Coordenadas Iguales"
 ])
 
 # =============================================
