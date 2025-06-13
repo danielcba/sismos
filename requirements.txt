@@ -11,3 +11,4 @@ supabase>=2.15.1
 mplcursors>=0.6
 scikit-learn>=1.6.0
 shapely>=2.0.2
+geopandas>=0.14.4
