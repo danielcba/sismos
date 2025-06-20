@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import st_folium, folium_static
+import plotly.express as px
 import plotly.graph_objs as go
 import numpy as np
 import math
@@ -285,3 +286,32 @@ st.caption("""
 **Nota Técnica:** Los cálculos de energía son aproximaciones basadas en modelos sismológicos. 
 La energía real puede variar según las características específicas de cada sismo.
 """)
+
+# Añadir después de la comparación energética
+st.subheader("Acumulación Histórica de Energía")
+
+if not sismos_df.empty:
+    # Calcular energía acumulada
+    sismos_df = sismos_df.sort_values('fecha_hora')
+    sismos_df['energia_joules'] = 10**(1.5 * sismos_df['magnitud'] + 4.8)
+    sismos_df['energia_acumulada'] = sismos_df['energia_joules'].cumsum()
+    
+    # Gráfico
+    fig = px.line(
+        sismos_df, 
+        x='fecha_hora', 
+        y='energia_acumulada',
+        log_y=True,
+        labels={'fecha_hora': 'Fecha', 'energia_acumulada': 'Energía Acumulada (Joules)'}
+    )
+    fig.update_layout(
+        title='Energía Sísmica Acumulada (Escala Logarítmica)',
+        yaxis_type="log"
+    )
+    st.plotly_chart(fig)
+    
+    # Anotar eventos importantes
+    eventos_importantes = sismos_df.nlargest(5, 'magnitud')
+    for i, row in eventos_importantes.iterrows():
+        st.markdown(f"**M{row['magnitud']:.1f}** ({row['fecha'].strftime('%Y-%m-%d')}): "
+                    f"{row['energia_joules']:.2e} Joules")
