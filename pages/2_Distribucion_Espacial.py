@@ -138,7 +138,7 @@ with tab1:
     """)
     
     # Crear mapa base
-    m = folium.Map(location=[-32.2935, -64.1810], zoom_start=7)
+    m = folium.Map(location=[-32.2935, -63.7111], zoom_start=7)
     
     # Preparar datos para el mapa de calor
     heat_data = [[row['latitud'], row['longitud']] for _, row in sismos_df.iterrows()]
@@ -162,7 +162,7 @@ with tab2:
     """)
     
     # Crear mapa base
-    m = folium.Map(location=[-32.2935, -64.1810], zoom_start=7)
+    m = folium.Map(location=[-32.2935, -63.7111], zoom_start=7)
     
     # Función para determinar color según profundidad
     def get_color(profundidad):
@@ -181,10 +181,12 @@ with tab2:
             radius=2 + row['magnitud'] * 1.2,
             # Popup con información detallada
             popup=f"""
-                Fecha: {row['fecha'].strftime('%Y-%m-%d')}<br>
-                Hora: {row['hora']}<br>
-                Magnitud: {row['magnitud']}<br>
-                Profundidad: {row['profundidad']} km
+                Fecha:{row['fecha'].strftime('%Y-%m-%d')}<br>
+                Hora:{row['hora']}<br>
+                Magnitud:{row['magnitud']}<br>
+                Profundidad:{row['profundidad']}km
+                Latitud:{row['latitud']}<br>
+                Longitud:{row['longitud']}<br>
             """,
             color=get_color(row['profundidad']),  # Color del borde según profundidad
             fill=True,                            # Rellenar el círculo
@@ -319,7 +321,7 @@ with tab3:
     sismos_df['cluster'] = labels
     
     # Crear mapa
-    m = folium.Map(location=[-32.2935, -64.1810], zoom_start=7)
+    m = folium.Map(location=[-32.2935, -63.7111], zoom_start=7)
     
     # Paleta de colores para los clusters
     colors = [
@@ -352,6 +354,8 @@ with tab3:
                 Hora:{row['hora']}<br>
                 Magnitud:{row['magnitud']}<br>
                 Profundidad:{row['profundidad']}km
+                Latitud:{row['latitud']}<br>
+                Longitud:{row['longitud']}<br>
             """,
             color=color,
             fill=True,
@@ -453,7 +457,7 @@ with tab4:
         st.warning("No se encontraron sismos en las mismas coordenadas.")
     else:
         # Crear mapa centrado en Córdoba
-        m = folium.Map(location=[-32.2935, -64.1810], zoom_start=7)
+        m = folium.Map(location=[-32.2935, -63.7111], zoom_start=7)
         
         # Función para obtener un color único por ubicación
         def get_location_color(lat, lon):
