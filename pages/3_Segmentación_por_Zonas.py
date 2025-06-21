@@ -138,7 +138,7 @@ def crear_mapa_cuadrantes(df, lat_bins, lon_bins):
     center_lon = df['longitud'].mean()
     
     # Crear mapa base
-    m = folium.Map(location=[-32.2935, -64.1810], zoom_start=7)
+    m = folium.Map(location=[-32.2935, -63.7111], zoom_start=7)
     
     # Agregar capa de calor
     heat_data = [[row['latitud'], row['longitud']] for _, row in df.iterrows()]
@@ -227,7 +227,7 @@ if not sismos_df.empty:
         """)
         
         # Crear mapa base centrado en Córdoba
-        m = folium.Map(location=[-32.2935, -64.1810], zoom_start=7)
+        m = folium.Map(location=[-32.2935, -63.7111], zoom_start=7)
         
         # Agregar sismos al mapa
         for _, sismo in sismos_df.iterrows():
@@ -239,9 +239,14 @@ if not sismos_df.empty:
                 fill_opacity=0.3,
                 weight=1,
                 popup=f"""
-                    Magnitud: {sismo['magnitud']:.1f}<br>
-                    Profundidad: {sismo['profundidad']} km<br>
-                    Fecha: {sismo['fecha'].strftime('%Y-%m-%d')}
+                    Magnitud:{sismo['magnitud']:.1f}<br>
+                    Profundidad:{sismo['profundidad']}km<br>
+                    Fecha:{sismo['fecha'].strftime('%Y-%m-%d')}<br>
+                    Hora:{sismo['hora']}<br>
+                    Magnitud:{sismo['magnitud']}<br>
+                    Profundidad:{sismo['profundidad']}km
+                    Latitud:{sismo['latitud']}<br>
+                    Longitud:{sismo['longitud']}<br>
                 """
             ).add_to(m)
         
