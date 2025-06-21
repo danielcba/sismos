@@ -70,12 +70,14 @@ with col1:
             fill=True,
             fill_opacity=0.3,
             weight=1,
-            popup=f"""
-                <div style='font-size:11px;'>
-                    <b>ID:</b> {sismo['id']}<br>
-                    <b>Magnitud:</b> {sismo['magnitud']:.1f}<br>
-                    <b>Profundidad:</b> {sismo['profundidad']} km<br>
-                    <b>Fecha:</b> {sismo['fecha'].strftime('%Y-%m-%d')}
+            popup=f"""                <div style='font-size:11px;'>
+                    ID:{sismo['id']}<br>
+                    Magnitud:{sismo['magnitud']:.1f}<br>
+                    Profundidad:{sismo['profundidad']}km<br>
+                    Fecha:{sismo['fecha'].strftime('%Y-%m-%d')}<br>
+                    Hora:{sismo['hora']}<br>
+                    Latitud:{sismo['latitud']}<br>
+                    Longitud:{sismo['longitud']}<br>
                 </div>
             """,
             tooltip=folium.Tooltip(
