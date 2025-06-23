@@ -69,7 +69,7 @@ with col1:
             color='red',
             fill=True,
             fill_opacity=0.3,
-            weight=1,
+            weight=0.5,
             popup=f"""                <div style='font-size:11px;'>
                     ID:{sismo['id']}<br>
                     Magnitud:{sismo['magnitud']:.1f}<br>
@@ -163,7 +163,7 @@ with col2:
             color='red',
             fill=True,
             fill_opacity=0.7,
-            weight=1,
+            weight=0.5,
             popup=f"""
                 <div style='font-size:11px;'>
                     <b>Sismo M{sismo_sel['magnitud']:.1f}</b><br>
