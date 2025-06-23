@@ -237,7 +237,7 @@ if not sismos_df.empty:
                 color='red',
                 fill=True,
                 fill_opacity=0.3,
-                weight=1,
+                weight=0.5,        # Grosor del borde
                 popup=f"""
                     Fecha:{sismo['fecha'].strftime('%Y-%m-%d')}<br>
                     Hora:{sismo['hora']}<br>
