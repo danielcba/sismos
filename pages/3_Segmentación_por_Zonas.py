@@ -239,8 +239,6 @@ if not sismos_df.empty:
                 fill_opacity=0.3,
                 weight=1,
                 popup=f"""
-                    Magnitud:{sismo['magnitud']:.1f}<br>
-                    Profundidad:{sismo['profundidad']}km<br>
                     Fecha:{sismo['fecha'].strftime('%Y-%m-%d')}<br>
                     Hora:{sismo['hora']}<br>
                     Magnitud:{sismo['magnitud']}<br>
