@@ -72,10 +72,10 @@ with col1:
             weight=0.5,
             popup=f"""                <div style='font-size:11px;'>
                     ID:{sismo['id']}<br>
-                    Magnitud:{sismo['magnitud']:.1f}<br>
-                    Profundidad:{sismo['profundidad']}km<br>
                     Fecha:{sismo['fecha'].strftime('%Y-%m-%d')}<br>
                     Hora:{sismo['hora']}<br>
+                    Magnitud:{sismo['magnitud']:.1f}<br>
+                    Profundidad:{sismo['profundidad']}km<br>
                     Latitud:{sismo['latitud']}<br>
                     Longitud:{sismo['longitud']}<br>
                 </div>
