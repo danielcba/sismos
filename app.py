@@ -139,7 +139,7 @@ st.sidebar.markdown("""
 fecha_inicio = st.sidebar.date_input(
     "Fecha inicial",
     value=sismos_df['fecha'].min() if not sismos_df.empty else datetime.today(),
-    min_value=datetime(2011, 6, 12),  # Fecha mínima histórica
+    min_value=datetime(2007, 8, 27),  # Fecha mínima histórica
     max_value=datetime(2025, 12, 31)   # Fecha máxima permitida
 )
 
