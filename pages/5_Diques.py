@@ -287,7 +287,9 @@ else:
             color=color,
             fill=True,
             fill_color=color,
-            fill_opacity=0.7
+            fill_opacity=0.5,  # Reducida la opacidad para mejor visibilidad
+            opacity=0.7,  # Añadida opacidad para el borde
+            weight=1  # Grosor del borde
         ).add_to(m)
     
     # Mostrar mapa
