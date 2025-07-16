@@ -124,7 +124,7 @@ st.sidebar.subheader("Filtros de Sismos")
 # Rango de fechas
 fecha_inicio = st.sidebar.date_input(
     "Fecha inicial",
-    value=datetime.now() - timedelta(days=365),
+    value=datetime(2007, 8, 27),  # Fecha del primer sismo registrado
     min_value=datetime(2007, 8, 27),
     max_value=datetime.now()
 )
