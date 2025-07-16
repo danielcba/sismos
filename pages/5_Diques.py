@@ -125,7 +125,7 @@ st.sidebar.subheader("Filtros de Sismos")
 fecha_inicio = st.sidebar.date_input(
     "Fecha inicial",
     value=datetime.now() - timedelta(days=365),
-    min_value=datetime(2010, 1, 1),
+    min_value=datetime(2007, 8, 27),
     max_value=datetime.now()
 )
 
@@ -293,20 +293,37 @@ else:
         st.subheader("Datos de Sismos")
         # Ordenar por fecha descendente
         sismos_mostrar = sismos_cercanos.sort_values('fecha', ascending=False)
-        # Seleccionar columnas relevantes
-        columnas_mostrar = ['fecha', 'hora', 'magnitud', 'profundidad', 'distancia_km', 'localidad']
-        st.dataframe(
-            sismos_mostrar[columnas_mostrar].rename(columns={
-                'fecha': 'Fecha',
-                'hora': 'Hora',
-                'magnitud': 'Magnitud',
-                'profundidad': 'Profundidad (km)',
-                'distancia_km': 'Distancia (km)',
-                'localidad': 'Localidad'
-            }),
-            use_container_width=True,
-            height=400
-        )
+        
+        # Definir columnas que queremos mostrar y sus nombres de visualización
+        columnas_posibles = {
+            'fecha': 'Fecha',
+            'hora': 'Hora',
+            'magnitud': 'Magnitud',
+            'profundidad': 'Profundidad (km)',
+            'distancia_km': 'Distancia (km)',
+            'localidad': 'Localidad',
+            'latitud': 'Latitud',
+            'longitud': 'Longitud'
+        }
+        
+        # Filtrar solo las columnas que existen en el DataFrame
+        columnas_existentes = [col for col in columnas_posibles.keys() if col in sismos_mostrar.columns]
+        
+        if columnas_existentes:
+            # Renombrar columnas para visualización
+            df_mostrar = sismos_mostrar[columnas_existentes].copy()
+            df_mostrar = df_mostrar.rename(columns={
+                k: v for k, v in columnas_posibles.items() if k in columnas_existentes
+            })
+            
+            # Mostrar el DataFrame
+            st.dataframe(
+                df_mostrar,
+                use_container_width=True,
+                height=400
+            )
+        else:
+            st.warning("No hay columnas de datos disponibles para mostrar.")
     else:
         st.info("No se encontraron sismos que cumplan con los criterios de búsqueda.")
 
