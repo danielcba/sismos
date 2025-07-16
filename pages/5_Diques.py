@@ -211,7 +211,7 @@ else:
     # Mostrar estadísticas
     st.subheader(f"Sismos cercanos a {dique_seleccionado}")
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Total de sismos", len(sismos_cercanos))
     with col2:
@@ -224,6 +224,11 @@ else:
             st.metric("Distancia promedio", f"{sismos_cercanos['distancia_km'].mean():.1f} km")
         else:
             st.metric("Distancia promedio", "N/A")
+    with col4:
+        if not sismos_cercanos.empty and 'profundidad' in sismos_cercanos.columns:
+            st.metric("Profundidad promedio", f"{sismos_cercanos['profundidad'].mean():.1f} km")
+        else:
+            st.metric("Profundidad promedio", "N/A")
     
     # Crear mapa
     st.subheader("Mapa de Sismos")
