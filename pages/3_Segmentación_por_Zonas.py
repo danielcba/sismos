@@ -231,20 +231,33 @@ if not sismos_df.empty:
         
         # Agregar sismos al mapa
         for _, sismo in sismos_df.iterrows():
+            # Color basado en la magnitud
+            if sismo['magnitud'] < 2.5:
+                color = 'green'
+            elif sismo['magnitud'] < 3.5:
+                color = 'orange'
+            else:
+                color = 'red'
+                
+            # Tamaño basado en la magnitud
+            size = 2 + sismo['magnitud']
+            
             folium.CircleMarker(
                 location=[sismo['latitud'], sismo['longitud']],
-                radius=2 + sismo['magnitud'],
-                color='red',
-                fill=True,
-                fill_opacity=0.3,
-                weight=0.5,        # Grosor del borde
+                radius=size,
+                color=color,         # Color del borde basado en magnitud
+                fill=True,           # Rellenar el círculo
+                fill_color=color,    # Color de relleno basado en magnitud
+                fill_opacity=0.4,    # Transparencia del relleno
+                opacity=0.7,         # Opacidad del borde
+                weight=1,            # Grosor del borde
                 popup=f"""
-                    Fecha:{sismo['fecha'].strftime('%Y-%m-%d')}<br>
-                    Hora:{sismo['hora']}<br>
-                    Magnitud:{sismo['magnitud']}<br>
-                    Profundidad:{sismo['profundidad']}km
-                    Latitud:{sismo['latitud']}<br>
-                    Longitud:{sismo['longitud']}<br>
+                    <b>Fecha:</b> {sismo['fecha'].strftime('%Y-%m-%d')}<br>
+                    <b>Hora:</b> {sismo['hora']}<br>
+                    <b>Magnitud:</b> {sismo['magnitud']:.1f}<br>
+                    <b>Profundidad:</b> {sismo['profundidad']} km<br>
+                    <b>Latitud:</b> {sismo['latitud']:.4f}<br>
+                    <b>Longitud:</b> {sismo['longitud']:.4f}
                 """
             ).add_to(m)
         
