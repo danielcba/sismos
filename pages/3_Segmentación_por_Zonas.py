@@ -240,7 +240,7 @@ if not sismos_df.empty:
                 color = 'red'
                 
             # Tamaño basado en la magnitud
-            size = 2 + sismo['magnitud']
+            size = 2 + (sismo['magnitud'] * 1.2)
             
             folium.CircleMarker(
                 location=[sismo['latitud'], sismo['longitud']],
