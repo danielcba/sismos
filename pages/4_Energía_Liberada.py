@@ -62,26 +62,40 @@ with col1:
     
     # Añadir todos los sismos con IDs únicos
     for idx, sismo in sismos_df.iterrows():
+        # Color basado en la magnitud
+        if sismo['magnitud'] < 2.5:
+            color = 'green'
+        elif sismo['magnitud'] < 3.5:
+            color = 'orange'
+        else:
+            color = 'red'
+            
+        # Tamaño basado en la magnitud
+        size = 2 + sismo['magnitud']
+        
         folium.CircleMarker(
             location=[sismo['latitud'], sismo['longitud']],
-            name=sismo['id'],  # Clave para la selección directa
-            radius=2 + sismo['magnitud'],
-            color='red',
-            fill=True,
-            fill_opacity=0.3,
-            weight=0.5,
-            popup=f"""                <div style='font-size:11px;'>
-                    ID:{sismo['id']}<br>
-                    Fecha:{sismo['fecha'].strftime('%Y-%m-%d')}<br>
-                    Hora:{sismo['hora']}<br>
-                    Magnitud:{sismo['magnitud']:.1f}<br>
-                    Profundidad:{sismo['profundidad']}km<br>
-                    Latitud:{sismo['latitud']}<br>
-                    Longitud:{sismo['longitud']}<br>
+            name=str(sismo['id']),  # Clave para la selección directa
+            radius=size,
+            color=color,         # Color del borde basado en magnitud
+            fill=True,           # Rellenar el círculo
+            fill_color=color,    # Color de relleno basado en magnitud
+            fill_opacity=0.4,    # Transparencia del relleno
+            opacity=0.7,         # Opacidad del borde
+            weight=1,            # Grosor del borde
+            popup=f"""                
+                <div style='font-size:11px;'>
+                    <b>ID:</b> {sismo['id']}<br>
+                    <b>Fecha:</b> {sismo['fecha'].strftime('%Y-%m-%d')}<br>
+                    <b>Hora:</b> {sismo['hora']}<br>
+                    <b>Magnitud:</b> {sismo['magnitud']:.1f}<br>
+                    <b>Profundidad:</b> {sismo['profundidad']} km<br>
+                    <b>Latitud:</b> {sismo['latitud']:.4f}<br>
+                    <b>Longitud:</b> {sismo['longitud']:.4f}
                 </div>
             """,
             tooltip=folium.Tooltip(
-                f"<div style='font-size:11px;'>Sismo M{sismo['magnitud']:.1f} Click para seleccionar</div>",
+                f"<div style='font-size:11px;'>Sismo M{sismo['magnitud']:.1f} - Click para seleccionar</div>",
                 sticky=False,
                 parse_html=True
             )
