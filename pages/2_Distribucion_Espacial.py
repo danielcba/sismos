@@ -544,7 +544,7 @@ with tab4:
                 color=location_color,  # Color único por ubicación
                 fill=True,
                 fill_color=location_color,  # Mismo color para el relleno
-                fill_opacity=10,  # 30% de opacidad para el relleno
+                fill_opacity=3,  # 70% de opacidad para el relleno
                 weight=0.5,  # Borde más fino para mejor apariencia
                 tooltip=None  # Sin tooltip al pasar el mouse
             )
