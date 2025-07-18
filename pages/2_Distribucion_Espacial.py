@@ -178,7 +178,7 @@ with tab2:
         folium.CircleMarker(
             location=[row['latitud'], row['longitud']],
             # Radio proporcional a la magnitud
-            radius=2 + row['magnitud'] * 1.2,
+            radius=2 + (row['magnitud'] * 1.2),  
             # Popup con información detallada
             popup=f"""
                 Fecha:{row['fecha'].strftime('%Y-%m-%d')}<br>
@@ -188,11 +188,11 @@ with tab2:
                 Latitud:{row['latitud']}<br>
                 Longitud:{row['longitud']}<br>
             """,
-            color=get_color(row['profundidad']),  # Color del borde según profundidad
-            fill=True,                            # Rellenar el círculo
-            fill_color=get_color(row['profundidad']),  # Color de relleno según profundidad
-            fill_opacity=0.3,                     # Transparencia del relleno
-            weight=0.5                            # Grosor del borde
+            color=get_color(row['profundidad']),  
+            fill=True,                            
+            fill_color=get_color(row['profundidad']),  
+            fill_opacity=0.3,                     
+            weight=0.5                            
         ).add_to(m)
     
     # Mostrar mapa
@@ -207,7 +207,7 @@ with tab2:
         c=sismos_df['profundidad'], 
         cmap='viridis',
         alpha=0.6,
-        s=sismos_df['magnitud'] * 10  # Tamaño según magnitud
+        s=sismos_df['magnitud'] * 10  
     )
     
     # Configurar gráfico
@@ -347,7 +347,7 @@ with tab3:
         folium.CircleMarker(
             location=[row['latitud'], row['longitud']],
             # Radio proporcional a la magnitud (igual que en la página principal)
-            radius=2 + row['magnitud'] * 1.2,
+            radius=2 + (row['magnitud'] * 1.2),  
             popup=f"""
                 {popup_text}<br>
                 Fecha:{row['fecha'].strftime('%Y-%m-%d')}<br>
@@ -534,7 +534,7 @@ with tab4:
             magnitud_maxima = group['magnitud'].max()
             
             # Calcular radio basado en la magnitud (misma fórmula que en otras pestañas)
-            radio = 2 + magnitud_maxima * 1.2
+            radio = 2 + (magnitud_maxima * 1.2)  # Tamaño consistente con app.py
             
             # Crear marcador con popup que solo se activa al hacer clic
             marker = folium.CircleMarker(
