@@ -70,8 +70,8 @@ with col1:
         else:
             color = 'red'
             
-        # Tamaño basado en la magnitud
-        size = 2 + sismo['magnitud']
+        # Tamaño basado en la magnitud (misma fórmula que en app.py)
+        size = 2 + (sismo['magnitud'] * 1.2)
         
         folium.CircleMarker(
             location=[sismo['latitud'], sismo['longitud']],
@@ -173,7 +173,7 @@ with col2:
         # Marcador central
         folium.CircleMarker(
             location=[sismo_sel['latitud'], sismo_sel['longitud']],
-            radius=8 + sismo_sel['magnitud'],
+            radius=2 + (sismo_sel['magnitud'] * 1.2),  # Tamaño consistente con app.py
             color='red',
             fill=True,
             fill_opacity=0.7,
