@@ -140,9 +140,9 @@ def crear_mapa_cuadrantes(df, lat_bins, lon_bins):
     # Crear mapa base
     m = folium.Map(location=[-32.2935, -63.7111], zoom_start=7)
     
-    # Agregar capa de calor
+    # Agregar capa de calor (misma configuración que en 2_Distribución_Espacial.py)
     heat_data = [[row['latitud'], row['longitud']] for _, row in df.iterrows()]
-    HeatMap(heat_data, radius=10).add_to(m)
+    HeatMap(heat_data, radius=15).add_to(m)
     
     # Agregar líneas de cuadrícula
     for lat in lat_bins:
@@ -157,7 +157,7 @@ def crear_mapa_cuadrantes(df, lat_bins, lon_bins):
         folium.PolyLine(
             locations=[[lat, lon] for lat in [df['latitud'].min(), df['latitud'].max()]],
             color='gray',
-            weight=1.5,  # Aumentado de 0.5 a 2.0 para mayor visibilidad
+            weight=1.5,  # Aumentado de 0.5 a 1.5 para mayor visibilidad
             opacity=0.8  # Aumentada la opacidad para mejor visibilidad
         ).add_to(m)
     
@@ -196,6 +196,15 @@ def mostrar_estadisticas_por_zona(df):
 sismos_df = fetch_sismos_data()
 
 if not sismos_df.empty:
+    # Usar todos los sismos sin filtrar
+    sismos_filtrados = sismos_df.copy()
+    
+    # Mostrar estadísticas
+    st.sidebar.write(f"Total de sismos: {len(sismos_filtrados)}")
+    st.sidebar.write(f"Rango de fechas: {sismos_filtrados['fecha'].min().strftime('%Y-%m-%d')} a {sismos_filtrados['fecha'].max().strftime('%Y-%m-%d')}")
+    st.sidebar.write(f"Rango de magnitudes: {sismos_filtrados['magnitud'].min():.1f} a {sismos_filtrados['magnitud'].max():.1f}")
+    st.sidebar.write(f"Rango de profundidades: {sismos_filtrados['profundidad'].min():.1f} a {sismos_filtrados['profundidad'].max():.1f} km")
+    
     # Crear pestañas
     tab1, tab2 = st.tabs(["Análisis por Cuadrantes", "Fallas Tectónicas"])
     
@@ -209,15 +218,15 @@ if not sismos_df.empty:
         
         # Dividir en cuadrantes
         n_divisiones = st.slider("Número de divisiones por eje", 3, 10, 5)
-        sismos_df, lat_bins, lon_bins = dividir_en_cuadrantes(sismos_df, n_divisiones)
+        sismos_con_cuadrantes, lat_bins, lon_bins = dividir_en_cuadrantes(sismos_filtrados, n_divisiones)
         
         # Mostrar mapa de calor por cuadrantes
         st.subheader("Mapa de Calor por Cuadrantes")
-        mapa_calor = crear_mapa_cuadrantes(sismos_df, lat_bins, lon_bins)
+        mapa_calor = crear_mapa_cuadrantes(sismos_filtrados, lat_bins, lon_bins)
         folium_static(mapa_calor, width=1000, height=600)
         
         # Mostrar estadísticas por zona
-        mostrar_estadisticas_por_zona(sismos_df)
+        mostrar_estadisticas_por_zona(sismos_con_cuadrantes)
     
     with tab2:
         st.header("Fallas Tectónicas")
