@@ -268,8 +268,8 @@ else:
         else:
             color = 'red'
         
-        # Tamaño basado en la magnitud
-        size = 3 + (sismo['magnitud'] * 2)
+        # Tamaño basado en la magnitud (misma fórmula que en app.py)
+        size = 2 + (sismo['magnitud'] * 1.2)
         
         # Popup con información
         popup = f"""
