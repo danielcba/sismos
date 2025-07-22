@@ -7,7 +7,7 @@ from supabase import create_client
 from datetime import datetime, timedelta
 import math
 
-# Configuración de la página
+# Configuración de la página - para grabar github
 st.set_page_config(
     page_title="Sismos cerca de Diques",
     page_icon="🏞️",
