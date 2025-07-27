@@ -65,11 +65,16 @@ def fetch_fallas_nombres():
 
 # Función para obtener datos de sismos
 def fetch_sismos_data():
+    """
+    Obtiene datos de sismos desde Supabase usando paginación (misma lógica que en app.py).
+    Retorna:
+        DataFrame: Datos de sismos con columnas procesadas
+    """
     try:
-        # Paginación para obtener todos los datos
         page_size = 1000
         offset = 0
         all_data = []
+
         
         while True:
             response = supabase.table('sismos').select('*').range(offset, offset + page_size - 1).execute()
@@ -239,7 +244,7 @@ if not sismos_df.empty:
         m = folium.Map(location=[-32.2935, -63.7111], zoom_start=7)
         
         # Agregar sismos al mapa
-        for _, sismo in sismos_df.iterrows():
+        for _, sismo in sismos_filtrados.sort_values("magnitud", ascending=False).iterrows():
             # Color basado en la magnitud
             if sismo['magnitud'] < 2.5:
                 color = 'green'
