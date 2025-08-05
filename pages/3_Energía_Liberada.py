@@ -235,7 +235,7 @@ with col2:
         ).add_to(m2)
         # st.info("Selecciona un sismo en el mapa izquierdo para visualizar la energía liberada")
     
-    st_folium(m2, width=500, height=610, key="mapa_der")
+    st_folium(m2, use_container_width=True, height=650, key="mapa_der")
 
 # --- Gráfico de comparación energética ---
 if st.session_state.sismo_seleccionado:
