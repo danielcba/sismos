@@ -145,7 +145,7 @@ fecha_inicio = st.sidebar.date_input(
 
 fecha_fin = st.sidebar.date_input(
     "Fecha final",
-    value=sismos_df['fecha'].max() if not sismos_df.empty else datetime.today(),
+    value=datetime.today(),
     min_value=fecha_inicio,  # No puede ser anterior a fecha inicial
     max_value=datetime(2025, 12, 31)
 )
@@ -344,7 +344,7 @@ if mostrar_mensaje_estado(sismos_filtro, "proximidad"):
     m = folium.Map(location=[-32.2935, -63.7111], zoom_start=7)
     
     # Añadir marcadores circulares para cada sismo
-    for _, sismo in sismos_filtro.iterrows():
+    for _, sismo in sismos_filtro.sort_values("magnitud", ascending=False).iterrows():
         # Color basado en la magnitud
         if sismo['magnitud'] < 2.5:
             color = 'green'
