@@ -237,7 +237,7 @@ if not sismos_df.empty:
         st.header("Fallas Tectónicas")
         st.markdown("""
             Visualización de las fallas tectónicas conocidas en la provincia de Córdoba.
-            Los círculos rojos representan sismos, mientras que las líneas azules representan fallas.
+            Los círculos representan sismos, mientras que las líneas azules representan fallas.
         """)
         
         # Crear mapa base centrado en Córdoba
