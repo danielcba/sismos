@@ -7,7 +7,7 @@ from supabase import create_client
 from datetime import datetime, timedelta
 import math
 
-# Configuración de la página - para grabar github
+# Configuración de la página
 st.set_page_config(
     page_title="Sismos cerca de Diques",
     page_icon="🏞️",
@@ -140,7 +140,7 @@ fecha_fin = st.sidebar.date_input(
 magnitud_min = st.sidebar.slider(
     "Magnitud mínima",
     min_value=1.5,
-    max_value=4.5,
+    max_value=6.0,
     value=1.5,
     step=0.1
 )
@@ -148,34 +148,34 @@ magnitud_min = st.sidebar.slider(
 magnitud_max = st.sidebar.slider(
     "Magnitud máxima",
     min_value=magnitud_min,
-    max_value=4.5,
-    value=4.5,
+    max_value=6.0,
+    value=6.0,
     step=0.1
 )
 
 # Rango de profundidades
 profundidad_min = st.sidebar.slider(
     "Profundidad mínima (km)",
-    min_value=1,
-    max_value=25,
-    value=1,
+    min_value=0,
+    max_value=12,
+    value=0,
     step=1
 )
 
 profundidad_max = st.sidebar.slider(
     "Profundidad máxima (km)",
     min_value=profundidad_min,
-    max_value=25,
-    value=25,
+    max_value=12,
+    value=12,
     step=1
 )
 
 # Radio de búsqueda (km)
 radio_km = st.sidebar.slider(
     "Radio de búsqueda (km)",
-    min_value=1,
-    max_value=50,
-    value=30,
+    min_value=0,
+    max_value=25,
+    value=25,
     step=1
 )
 
