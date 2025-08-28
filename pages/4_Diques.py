@@ -54,6 +54,8 @@ def fetch_diques_data():
 
 # Obtener datos de diques
 DIQUES = fetch_diques_data()
+# Ordenar alfabéticamente los diques por nombre
+DIQUES.sort(key=lambda d: d['nombre'])
 
 # Función para calcular distancia entre dos puntos en km (fórmula de Haversine)
 def haversine(lat1, lon1, lat2, lon2):
@@ -157,7 +159,7 @@ magnitud_max = st.sidebar.slider(
 profundidad_min = st.sidebar.slider(
     "Profundidad mínima (km)",
     min_value=0,
-    max_value=20,
+    max_value=12,
     value=0,
     step=1
 )
@@ -165,8 +167,8 @@ profundidad_min = st.sidebar.slider(
 profundidad_max = st.sidebar.slider(
     "Profundidad máxima (km)",
     min_value=profundidad_min,
-    max_value=20,
-    value=20,
+    max_value=12,
+    value=12,
     step=1
 )
 
