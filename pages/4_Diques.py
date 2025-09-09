@@ -159,7 +159,7 @@ magnitud_max = st.sidebar.slider(
 profundidad_min = st.sidebar.slider(
     "Profundidad mínima (km)",
     min_value=0,
-    max_value=20,
+    max_value=22,
     value=0,
     step=1
 )
@@ -167,8 +167,8 @@ profundidad_min = st.sidebar.slider(
 profundidad_max = st.sidebar.slider(
     "Profundidad máxima (km)",
     min_value=profundidad_min,
-    max_value=20,
-    value=20,
+    max_value=22,
+    value=22,
     step=1
 )
 
