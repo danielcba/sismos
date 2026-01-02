@@ -147,7 +147,7 @@ fecha_fin = st.sidebar.date_input(
     "Fecha final",
     value=datetime.today(),
     min_value=fecha_inicio,  # No puede ser anterior a fecha inicial
-    max_value=datetime(2025, 12, 31)
+    max_value=datetime(2026, 12, 31)
 )
 
 # ----------------------------
