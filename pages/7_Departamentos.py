@@ -363,11 +363,23 @@ if departamentos:
         sismos_con_depto = sismos_df.copy()
         sismos_con_depto['departamento'] = sismos_con_depto.apply(asignar_departamento, axis=1)
         
-        # Contar sismos por departamento
+        # Contar sismos por departamento (incluyendo cero sismos)
         sismos_por_depto = sismos_con_depto['departamento'].value_counts().reset_index()
         sismos_por_depto.columns = ['Departamento', 'Total de Sismos']
         
-        # Calcular estadísticas adicionales
+        # Agregar departamentos con cero sismos
+        todos_deptos = set(deptos['nombre'] for deptos in departamentos)
+        deptos_con_sismos = set(sismos_por_depto['Departamento'])
+        deptos_sin_sismos = todos_deptos - deptos_con_sismos
+        
+        # Crear filas para departamentos con cero sismos
+        for depto_nombre in deptos_sin_sismos:
+            sismos_por_depto = pd.concat([sismos_por_depto, pd.DataFrame({
+                'Departamento': [depto_nombre],
+                'Total de Sismos': [0]
+            })], ignore_index=True)
+        
+        # Calcular estadísticas adicionales (solo para departamentos con sismos)
         stats_por_depto = sismos_con_depto.groupby('departamento').agg({
             'magnitud': ['mean', 'max', 'min'],
             'profundidad': 'mean'
@@ -377,13 +389,22 @@ if departamentos:
         stats_por_depto = stats_por_depto.reset_index()
         stats_por_depto.rename(columns={'departamento': 'Departamento'}, inplace=True)
         
-        # Unir conteo con estadísticas
+        # Unir conteo con estadísticas (left join para mantener todos los departamentos)
         tabla_completa = sismos_por_depto.merge(stats_por_depto, on='Departamento', how='left')
+        
+        # Llenar valores NaN con "Sin datos" para departamentos con cero sismos
+        tabla_completa = tabla_completa.fillna({
+            'Magnitud Promedio': 'Sin datos',
+            'Magnitud Máxima': 'Sin datos',
+            'Magnitud Mínima': 'Sin datos',
+            'Profundidad Promedio': 'Sin datos'
+        })
         
         # Ordenar por total de sismos (descendente)
         tabla_completa = tabla_completa.sort_values('Total de Sismos', ascending=False)
         
-        # Mostrar tabla completa
+        # Mostrar tabla completa con índice comenzando en 1
+        tabla_completa.index = range(1, len(tabla_completa) + 1)
         st.dataframe(
             tabla_completa,
             height=400,
