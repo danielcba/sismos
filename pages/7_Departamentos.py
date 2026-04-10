@@ -30,7 +30,7 @@ def fetch_departamentos_data():
             dbname='postgres',
             user='postgres',
             password='Ozzy153624+$',
-            host='db.dmgashfrjnhaduiifabr.supabase.co',
+            host='dmgashfrjnhaduiifabr.supabase.co',
             port='5432'
         )
         cur = conn.cursor()
