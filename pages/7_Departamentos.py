@@ -19,7 +19,7 @@ st.set_page_config(
 st.title("🗺️ Mapa de Departamentos de Córdoba")
 
 # Credenciales de Supabase (mismas que en app.py)
-SUPABASE_URL = "https://db.dmgashfrjnhaduiifabr.supabase.co"
+SUPABASE_URL = "https://dmgashfrjnhaduiifabr.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZ2FzaGZyam5oYWR1aWlmYWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4OTc5MDMsImV4cCI6MjA2MjQ3MzkwM30.vEld_xzy8Vcsz-0wBzZpTviWOKWi_OklLfTNP7JXDfo"
 
 # Función para obtener datos de departamentos
@@ -30,7 +30,7 @@ def fetch_departamentos_data():
             dbname='postgres',
             user='postgres',
             password='Ozzy153624+$',
-            host='dmgashfrjnhaduiifabr.supabase.co',
+            host='db.dmgashfrjnhaduiifabr.supabase.co',
             port='5432'
         )
         cur = conn.cursor()
