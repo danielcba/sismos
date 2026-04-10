@@ -2,9 +2,8 @@ import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import folium_static
-import psycopg2
 from shapely import wkt
-from shapely.geometry import Point
+from shapely.geometry import Point, shape
 from supabase import create_client
 import json
 import plotly.express as px
@@ -23,36 +22,30 @@ SUPABASE_URL = "https://dmgashfrjnhaduiifabr.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZ2FzaGZyam5oYWR1aWlmYWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4OTc5MDMsImV4cCI6MjA2MjQ3MzkwM30.vEld_xzy8Vcsz-0wBzZpTviWOKWi_OklLfTNP7JXDfo"
 
 # Función para obtener datos de departamentos
+@st.cache_data
 def fetch_departamentos_data():
     try:
-        # Conexión directa a PostgreSQL para datos geográficos
-        conn = psycopg2.connect(
-            dbname='postgres',
-            user='postgres',
-            password='Ozzy153624+$',
-            host='db.dmgashfrjnhaduiifabr.supabase.co',
-            port='5432'
-        )
-        cur = conn.cursor()
+        # Credenciales de Supabase
+        SUPABASE_URL = "https://dmgashfrjnhaduiifabr.supabase.co"
+        SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZ2FzaGZyam5oYWR1aWlmYWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4OTc5MDMsImV4cCI6MjA2MjQ3MzkwM30.vEld_xzy8Vcsz-0wBzZpTviWOKWi_OklLfTNP7JXDfo"
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         
         # Obtener departamentos
-        cur.execute("SELECT nombre, ST_AsText(geom) FROM departamentos;")
-        departamentos_rows = cur.fetchall()
+        deptos_resp = supabase.from_('departamentos').select('nombre, geom').execute()
+        departamentos_rows = deptos_resp.data
         
         # Obtener cabeceras
-        cur.execute("SELECT departamento, cabecera, ST_AsText(geom) FROM cabeceras;")
-        cabeceras = cur.fetchall()
-        
-        cur.close()
-        conn.close()
+        cab_resp = supabase.from_('cabeceras').select('departamento, cabecera, geom').execute()
+        cabeceras = cab_resp.data
         
         # Crear diccionario de cabeceras para fácil acceso
-        cabeceras_dict = {depto: cabecera for depto, cabecera, _ in cabeceras}
+        cabeceras_dict = {c['departamento']: c['cabecera'] for c in cabeceras}
         
         departamentos = []
-        for nombre, geom_wkt in departamentos_rows:
+        for row in departamentos_rows:
             try:
-                geom = wkt.loads(geom_wkt)
+                # Procesar geometría GeoJSON desde Supabase
+                geom = shape(row['geom'])
                 
                 # Para polígonos, obtener coordenadas del exterior
                 if hasattr(geom, 'exterior'):
@@ -69,11 +62,11 @@ def fetch_departamentos_data():
                         continue
                 
                 departamentos.append({
-                    'nombre': nombre,
+                    'nombre': row['nombre'],
                     'coords': coords,
                     'center': [center_lat, center_lon],
                     'geom': geom,
-                    'cabecera': cabeceras_dict.get(nombre, 'Sin cabecera')
+                    'cabecera': cabeceras_dict.get(row['nombre'], 'Sin cabecera')
                 })
                 
             except Exception as e:
@@ -86,22 +79,29 @@ def fetch_departamentos_data():
         return [], []
 
 # Función para obtener sismos
+@st.cache_data
 def fetch_sismos_data():
     try:
+        # Credenciales de Supabase
+        SUPABASE_URL = "https://dmgashfrjnhaduiifabr.supabase.co"
+        SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZ2FzaGZyam5oYWR1aWlmYWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4OTc5MDMsImV4cCI6MjA2MjQ3MzkwM30.vEld_xzy8Vcsz-0wBzZpTviWOKWi_OklLfTNP7JXDfo"
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         
-        # Usar paginación como en app.py
+        # Paginación para obtener todos los datos
         page_size = 1000
         offset = 0
         all_data = []
         
         while True:
-            response = supabase.table('sismos').select('*').range(offset, offset + page_size - 1).execute()
+            response = supabase.from_('sismos').select(
+                "fecha, hora, latitud, longitud, profundidad, magnitud"
+            ).order("fecha", desc=True).order("hora", desc=True).range(offset, offset + page_size - 1)
             
-            if not response.data:
+            data = response.execute().data
+            if not data:
                 break
                 
-            all_data.extend(response.data)
+            all_data.extend(data)
             offset += page_size
         
         df = pd.DataFrame(all_data)
@@ -192,29 +192,29 @@ if departamentos:
             # Primero intentar coincidencia directa, luego usar mapeo
             depto_normalizado = depto['nombre'].lower().replace('-', '').replace('_', ' ')
             
-            for departamento, cabecera, geom_wkt in cabeceras:
+            for c in cabeceras:
                 # Normalizar nombre de la cabecera
-                cab_depto_normalizado = departamento.lower().replace('-', '').replace('_', ' ')
+                cab_depto_normalizado = c['departamento'].lower().replace('-', '').replace('_', ' ')
                 
                 # Múltiples formas de comparación
                 if (cab_depto_normalizado == depto_normalizado or
                     cab_depto_normalizado.replace(' ', '') == depto_normalizado.replace(' ', '') or
-                    departamento.lower() == depto['nombre'].lower() or
-                    departamento.replace('-', ' ').lower() == depto['nombre'].replace('-', ' ').lower()):
+                    c['departamento'].lower() == depto['nombre'].lower() or
+                    c['departamento'].replace('-', ' ').lower() == depto['nombre'].replace('-', ' ').lower()):
                     
-                    punto = wkt.loads(geom_wkt)
+                    punto = shape(c['geom'])
                     cabecera_coords = [punto.y, punto.x]  # [lat, lon] para Folium
-                    cabecera_nombre = cabecera
+                    cabecera_nombre = c['cabecera']
                     break
             
             # Si no se encontró, intentar con el mapeo manual
             if not cabecera_coords and depto['nombre'] in mapeo_nombres:
                 nombre_buscado = mapeo_nombres[depto['nombre']]
-                for departamento, cabecera, geom_wkt in cabeceras:
-                    if departamento == nombre_buscado:
-                        punto = wkt.loads(geom_wkt)
+                for c in cabeceras:
+                    if c['departamento'] == nombre_buscado:
+                        punto = shape(c['geom'])
                         cabecera_coords = [punto.y, punto.x]
-                        cabecera_nombre = cabecera
+                        cabecera_nombre = c['cabecera']
                         break
             
             if not cabecera_coords:
@@ -314,7 +314,7 @@ if departamentos:
                 location=[sismo['latitud'], sismo['longitud']],
                 radius=radius,
                 popup=f"""
-                <b>Sismo #{sismo['id']}</b><br>
+                <b>Sismo</b><br>
                 Fecha: {sismo['fecha'].strftime('%Y-%m-%d')}<br>
                 Hora: {sismo['hora']}<br>
                 Magnitud: {sismo['magnitud']}<br>
